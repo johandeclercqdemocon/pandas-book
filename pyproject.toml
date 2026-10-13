@@ -1,0 +1,21 @@
+[project]
+name = "pandas-book"
+version = "0.1.0"
+description = "Runnable code and claim checks for 'Pandas at Work'"
+requires-python = ">=3.12"
+dependencies = [
+    "pandas>=3.0",
+    "numpy",
+    "pyarrow",
+    "matplotlib",
+]
+
+# Pandas is the subject, so it is a dependency. Nothing here calls a network
+# service or a model; the whole book verifies offline and for free.
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["pdbook"]
