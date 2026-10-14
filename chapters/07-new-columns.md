@@ -33,6 +33,21 @@ False
 
 `calls["minutes"] = ...` changed `calls`. `calls.assign(hour=...)` made a new table, and `calls` has no `hour` column. Both work on the whole column at once. The lambda in `assign` receives the table at that point of the chain. A later step can use a column that an earlier step made.
 
+#### `pd.DataFrame.assign`
+
+```text
+pd.DataFrame.assign(
+    self,
+    **kwargs,
+)
+```
+
+The method returns a new table with the new or changed columns. The table that you call it on does not change.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `**kwargs` | — | one keyword for each column: `name=value`. A value can be a constant, a Series, an array or a function of the table. The functions run in order, so `c=lambda d: d["b"] + 1` can use a `b` made one keyword earlier | a Series aligns on the index: a Series with the labels 1 and 2 on a table with the labels 0 and 1 gives `NaN` in row 0. A name with a space needs `**{"my col": ...}` |
+
 ## The index decides where values go
 
 When you assign a Series, pandas aligns it to the index of the table. It does not use the order:
@@ -108,6 +123,125 @@ Read the results. `where(d > 0)` keeps the positive durations and makes 4,474 va
 
 `pd.cut` gives a category and leaves the nulls as `NaN`, and `np.select` gives text with a label of your choice for them. `map` with a dict gives `NaN` for a key that is not in the dict: `failed` is missing from the dict above, and 1,033 values are `NaN`. This is the correct behavior and a trap, so check `isna().sum()` after a `map`.
 
+The block used five callables. Their signatures and parameters follow.
+
+#### `pd.Series.where`
+
+```text
+pd.Series.where(
+    self,
+    cond,
+    other=<no_default>,
+    *,
+    inplace=False,
+    axis=None,
+    level=None,
+)
+```
+
+The method keeps each value where `cond` is `True` and replaces it where `cond` is `False`.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `cond` | required | a boolean Series, an array of the same length, or a function of the Series | a Series with other labels aligns: a label that `cond` does not have counts as `False`. A list of the wrong length raises `ValueError` |
+| `other` | `<no_default>` | the value for the rows where `cond` is `False`: a value, a Series or a function. Not set means `NaN` | without `other`, an `int64` Series becomes `float64`, because it must hold `NaN`. `where(d > 0)` makes 4,474 values `NaN` |
+| `inplace` | `False` | with `True`, change the Series and return `None` | — |
+| `axis` | `None` | for a DataFrame, the axis on which to align `cond` and `other`. Not used for a Series | — |
+| `level` | `None` | for a MultiIndex, the level on which to align | — |
+
+#### `pd.Series.mask`
+
+```text
+pd.Series.mask(
+    self,
+    cond,
+    other=<no_default>,
+    *,
+    inplace=False,
+    axis=None,
+    level=None,
+)
+```
+
+The method is the opposite of `where`: it replaces each value where `cond` is `True`.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `cond` | required | the rows to replace | the same alignment as `where` |
+| `other` | `<no_default>` | the new value. Not set means `NaN` | the same upcast to `float64` as `where` |
+| `inplace` | `False` | with `True`, change the Series and return `None` | — |
+| `axis` | `None` | for a DataFrame, the axis on which to align | — |
+| `level` | `None` | for a MultiIndex, the level on which to align | — |
+
+#### `np.select`
+
+```text
+np.select(
+    condlist,
+    choicelist,
+    default=0,
+)
+```
+
+The NumPy function returns an array with, for each row, the choice of the first condition that is true.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `condlist` | required | a list of boolean arrays or Series | `isna` must come first, because `NaN < 30` is `False` and the null would fall through to `default` |
+| `choicelist` | required | a list of values or arrays, one for each condition | a list of another length raises `ValueError` |
+| `default` | `0` | the value where no condition is true | with text choices, the default `0` raises `TypeError` on NumPy 2.5: give a text `default`. The result is a NumPy array, not a Series, and it has no index |
+
+#### `pd.cut`
+
+```text
+pd.cut(
+    x,
+    bins,
+    right=True,
+    labels=None,
+    retbins=False,
+    precision=3,
+    include_lowest=False,
+    duplicates='raise',
+    ordered=True,
+)
+```
+
+The function puts each number in an interval and returns a category.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `x` | required | the numbers, one-dimensional | a value outside all the bins becomes `NaN`, with no message |
+| `bins` | required | the edges of the intervals, or a number of intervals of equal width | edges `[0, 5, 10]` exclude 0: `(0, 5]` does not hold it, and 0 becomes `NaN` |
+| `right` | `True` | `True` gives intervals `(a, b]`, `False` gives `[a, b)` | — |
+| `labels` | `None` | the names of the intervals, one fewer than the edges. `False` gives the interval number | a list of the wrong length raises `ValueError` |
+| `retbins` | `False` | `True` also returns the edges. Use it when `bins` is a number | the result is a tuple, not a Series |
+| `precision` | `3` | the number of digits in the names of the intervals | the names are rounded and the bins are not. With `bins=[0.1216, 1.0556]` and `precision=1`, the interval is named `(0.1, 1.1]`, and 1.08 still becomes `NaN` |
+| `include_lowest` | `False` | with `True`, the first interval holds its left edge | without it, the smallest edge is outside every interval |
+| `duplicates` | `'raise'` | `'raise'` or `'drop'` for repeated edges | edges `[0, 5, 5, 10]` raise `ValueError`. `'drop'` makes two intervals |
+| `ordered` | `True` | the category is ordered. `False` allows a label twice | `ordered=False` without `labels` raises `ValueError` |
+
+#### `pd.Series.map`
+
+```text
+pd.Series.map(
+    self,
+    func=None,
+    na_action=None,
+    engine=None,
+    **kwargs,
+)
+```
+
+The method returns a new Series with each value replaced through a dict, a Series or a function.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `func` | `None` | a dict, a Series or a function of one value | a key not in the dict gives `NaN`: 1,033 for `failed`. A `defaultdict` gives its default instead |
+| `na_action` | `None` | `'ignore'` passes a missing value through and does not call the function on it | without it, the function receives `NaN`: `lambda v: v.upper()` raises `AttributeError` |
+| `engine` | `None` | a compiler for the function, such as Numba. `None` runs Python | with a dict, any `engine` raises `ValueError` |
+| `**kwargs` | — | more keyword arguments for the function | — |
+
 ## The three speeds
 
 A bill needs a rule with a condition, a rounding, and a lookup in two tables. Only answered calls are billed. The billed time is the duration rounded up to whole minutes, with a minimum of one minute. The price per minute depends on the plan of the caller. Here are three ways to write it. All three are in [`pdbook/rating.py`](../pdbook/rating.py).
@@ -182,14 +316,70 @@ assert t_loop / t_vec > 10 and t_apply / t_vec > 3
 
 ```text
 # output varies
-loop 0.583s  apply 0.169s  vector 0.0089s
-loop/vector 65x  apply/vector 19x
+loop 0.601s  apply 0.179s  vector 0.0090s
+loop/vector 67x  apply/vector 20x
 total bill 4,245.09
 ```
 
 The block prints the times of one run. The assertion at the end of the block checks the order of magnitude: the loop must be more than 10 times slower than the column form, and `apply` more than 3 times slower. The ratios depend on the machine and on the load at that moment, and they depend on the number of rows. The first exercise measures how.
 
 The bill is the same in all three: 4,245.09 euros over 15,526 billed calls. The `assert_series_equal` lines prove it, and so you can use the fast form with the same trust.
+
+The three functions are in [`pdbook/rating.py`](../pdbook/rating.py). They take the same three tables and return the same Series.
+
+#### `pdbook.rating.rate_vector`
+
+```text
+pdbook.rating.rate_vector(
+    calls,
+    subs,
+    plans,
+)
+```
+
+The function returns the cost of each call in euros, from whole columns.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `calls` | required | the call records | — |
+| `subs` | required | the subscribers, with `subscriber_id` and `plan` | a caller that is not in `subs` gets the cost `NaN`, and the sum of the bill skips it with no message. Check `isna().sum()` |
+| `plans` | required | the plans, with `plan` and `rate_per_min_eur` | — |
+
+#### `pdbook.rating.rate_apply`
+
+```text
+pdbook.rating.rate_apply(
+    calls,
+    subs,
+    plans,
+)
+```
+
+The function returns the same bill with `apply(axis=1)`: one Python call for each row.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `calls` | required | the call records | — |
+| `subs` | required | the subscribers | a caller that is not in `subs` raises `KeyError` |
+| `plans` | required | the plans | — |
+
+#### `pdbook.rating.rate_loop`
+
+```text
+pdbook.rating.rate_loop(
+    calls,
+    subs,
+    plans,
+)
+```
+
+The function returns the same bill with a loop over `iterrows`.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `calls` | required | the call records | — |
+| `subs` | required | the subscribers | a caller that is not in `subs` raises `KeyError` |
+| `plans` | required | the plans | — |
 
 ## Why the loop is slow
 
@@ -220,6 +410,39 @@ True
 ```
 
 The second line shows that `.str[1:].astype(int)` gives the same result without a Python function. Try the column form first. When you must use `apply`, prefer `Series.map` or `Series.apply` over `DataFrame.apply(axis=1)`, because a column holds one type, and a row holds a mix.
+
+#### `pd.DataFrame.apply`
+
+```text
+pd.DataFrame.apply(
+    self,
+    func,
+    axis=0,
+    raw=False,
+    result_type=None,
+    args=(),
+    by_row='compat',
+    engine=None,
+    engine_kwargs=None,
+    **kwargs,
+)
+```
+
+The method calls `func` on each column, or with `axis=1` on each row, and combines the results.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `func` | required | a function of a Series, a name such as `"sum"`, or a list of them | — |
+| `axis` | `0` | `0` calls `func` on each column, `1` on each row | `axis=1` calls `func` 20,000 times, more than 10 times slower than the column form (asserted) |
+| `raw` | `False` | `True` passes a NumPy array, not a Series, to `func` | with `True`, `func` cannot use names such as `row["a"]` |
+| `result_type` | `None` | for `axis=1`: `'expand'` turns a list result into columns, `'reduce'` keeps one value, `'broadcast'` keeps the shape | without it, a list result stays a list in each cell |
+| `args` | `()` | more positional arguments for `func` | — |
+| `by_row` | `'compat'` | only for a list or dict of functions: `False` passes the whole column | — |
+| `engine` | `None` | a compiler, such as Numba. `None` runs Python | `engine="numba"` raises `ImportError` here |
+| `engine_kwargs` | `None` | options for the engine | — |
+| `**kwargs` | — | more keyword arguments for `func` | — |
+
+A row from `apply(axis=1)` is one Series, and a Series has one dtype. A row of the call records has the dtype `object`. A row with an `int64` and a `float64` column makes the integer a float. The function receives other types than the columns have.
 
 ## Build: the bill
 
@@ -295,90 +518,50 @@ The row version called the function 20,000 times, one call for each row. The col
 - **Failure.** A rule with `if` and `for` over rows. Rewrite it with `where`, `np.select` or `map`.
 - **Cost.** The call count. 20,000 calls here, and the speed ratio of this chapter is the price of those calls.
 
-## Reference
+`np.select` has a rule too: the first true condition wins. A chain of `np.where` calls gives the same result. Write it from the last condition back to the first, with `default` at the end. The next block builds the chain and compares it with `np.select` on the bands of this chapter:
 
 ```python
 import numpy as np
-import pandas as pd
 
-from pdbook.rating import rate_apply, rate_loop, rate_vector
-from pdbook.sigs import show_signature
+from pdbook.io import load_calls
 
-show_signature(pd.DataFrame.assign)
-show_signature(pd.Series.where, ["cond", "other"])
-show_signature(pd.Series.mask, ["cond", "other"])
-show_signature(np.select, ["condlist", "choicelist", "default"])
-show_signature(pd.cut, ["x", "bins", "labels", "right"])
-show_signature(pd.Series.map, ["func", "na_action"])
-show_signature(pd.DataFrame.apply, ["func", "axis"])
-show_signature(rate_vector)
-show_signature(rate_apply)
-show_signature(rate_loop)
+d = load_calls()["duration_s"]
+conditions = [d.isna(), d.eq(0), d.lt(30), d.lt(300)]
+choices = ["none", "unanswered", "short", "normal"]
+
+chain = np.full(len(d), "long", dtype=object)
+for cond, choice in reversed(list(zip(conditions, choices))):
+    chain = np.where(cond, choice, chain)
+
+selected = np.select(conditions, choices, default="long")
+print(bool((chain == selected).all()))
+
+swapped = np.select([d.lt(30), d.isna(), d.eq(0), d.lt(300)],
+                    ["short", "none", "unanswered", "normal"], default="long")
+print(int((swapped != selected).sum()), sorted(set(selected[swapped != selected].tolist())))
 ```
 
 ```text
-DataFrame.assign(
-    self
-    **kwargs
-)
-NDFrame.where(
-    cond
-    other=<no_default>
-)  # 4 more parameters
-NDFrame.mask(
-    cond
-    other=<no_default>
-)  # 4 more parameters
-select(
-    condlist
-    choicelist
-    default=0
-)
-cut(
-    x
-    bins
-    right: 'bool' = True
-    labels=None
-)  # 5 more parameters
-Series.map(
-    func: 'Callable | Mapping | Series | None' = None
-    na_action: "Literal['ignore'] | None" = None
-)  # 3 more parameters
-DataFrame.apply(
-    func: 'AggFuncType'
-    axis: 'Axis' = 0
-)  # 8 more parameters
-rate_vector(
-    calls: 'pd.DataFrame'
-    subs: 'pd.DataFrame'
-    plans: 'pd.DataFrame'
-)
-rate_apply(
-    calls: 'pd.DataFrame'
-    subs: 'pd.DataFrame'
-    plans: 'pd.DataFrame'
-)
-rate_loop(
-    calls: 'pd.DataFrame'
-    subs: 'pd.DataFrame'
-    plans: 'pd.DataFrame'
-)
+True
+3441 ['unanswered']
 ```
 
-| Parameter | Default | What it does here | What goes wrong |
-|---|---|---|---|
-| `assign(**kwargs)` | — | each keyword is a new column; a function gets the table at that point | — |
-| `where(cond, other=...)` | not set | keep the values where `cond` is `True`; elsewhere put `other` or `NaN` | `where(d > 0)` makes 4,474 values `NaN` |
-| `mask(cond, other=...)` | not set | the opposite of `where` | — |
-| `np.select(condlist, choicelist, default=...)` | `0` | the first true condition decides | `isna` must come first, because `NaN < 30` is `False` |
-| `pd.cut(x, bins, right=..., labels=...)` | `True`, `None` | numbers into labelled ranges, `(a, b]` for `right=True` | nulls stay `NaN` |
-| `map(func, na_action=...)` | `None`, `None` | a dict or a function for each value | a key not in the dict gives `NaN`: 1,033 for `failed` |
-| `apply(func, axis=...)` | required, `0` | `axis=1` calls `func` once for each row | 20,000 calls, and more than 10 times slower than the column form (asserted) |
-| `rate_vector(calls, subs, plans)` | required | the bill for each call, from whole columns | — |
-| `rate_apply(calls, subs, plans)` | required | the same bill with `apply(axis=1)` | — |
-| `rate_loop(calls, subs, plans)` | required | the same bill with `iterrows` | — |
+The chain and `np.select` agree on all 20,000 rows. The first condition is the last `np.where` to write, so it overwrites all the others. This is why the order of the conditions is part of the rule. The last line puts `lt(30)` first. The 3,441 zero durations are less than 30 too, so they become `short` and not `unanswered`. The nulls stay `none`, because `NaN < 30` is `False`.
 
-The three `rate_` functions return a Series named `cost_eur` with the index of `calls`, and they give equal results.
+## Reference
+
+| Callable | Introduced in | Contract |
+|---|---|---|
+| `pd.DataFrame.assign` | Add a column | a new table with new columns; functions see the earlier ones |
+| `pd.Series.where` | Conditions | keep where the condition is true, else `other` or `NaN` |
+| `pd.Series.mask` | Conditions | replace where the condition is true |
+| `np.select` | Conditions | the choice of the first true condition, as a NumPy array |
+| `pd.cut` | Conditions | numbers into labelled intervals, as a category |
+| `pd.Series.map` | Conditions | each value through a dict, a Series or a function; unknown keys give `NaN` |
+| `pd.DataFrame.apply` | When apply is the right tool | a function on each column, or with `axis=1` on each row |
+| `pdbook.rating.rate_vector` | The three speeds | the bill from whole columns |
+| `pdbook.rating.rate_apply` | The three speeds | the same bill with `apply(axis=1)` |
+| `pdbook.rating.rate_loop` | The three speeds | the same bill with `iterrows` |
 
 ## What you have now
 

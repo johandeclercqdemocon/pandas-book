@@ -128,6 +128,25 @@ per caller   (600,)
 
 20,000 loaded, 15,526 answered, and 600 callers. The check says that an answered call always has a duration. That is a fact about the data, and you want to be told when it is false.
 
+#### `pd.DataFrame.pipe`
+
+```text
+pd.DataFrame.pipe(
+    self,
+    func,
+    *args,
+    **kwargs,
+)
+```
+
+The method calls `func(df, *args, **kwargs)` and returns what `func` returns.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `func` | required | a function whose first argument is the table. A tuple `(function, "name")` passes the table as the keyword `name` instead | a `func` that returns `None` ends the chain: the next step fails on `None`, far from the cause. With a tuple, a keyword of the same name raises `ValueError` |
+| `*args` | — | more positional arguments for `func` | — |
+| `**kwargs` | — | more keyword arguments for `func` | — |
+
 The same chain with a planted fault stops at the check:
 
 ```python
@@ -151,6 +170,24 @@ except ValueError as error:
 ```text
 ValueError: an answered call has no duration
 ```
+
+#### `pdbook.report.require`
+
+```text
+pdbook.report.require(
+    df,
+    test,
+    message,
+)
+```
+
+The function is a step for `pipe`. It returns `df` unchanged when `test(df)` is true, and raises `ValueError(message)` when it is false.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `df` | required | the table that the chain passes | — |
+| `test` | required | a function of the table that returns one `True` or `False` | a test that returns a Series raises `ValueError: The truth value of a Series is ambiguous`. End it with `.all()` or `.any()` |
+| `message` | required | the text of the error | — |
 
 ## When a chain is too long
 
@@ -191,6 +228,58 @@ basic     Liège    926       727        2057        205.7        0.785
 ```
 
 The report has 20 rows: 4 plans and 5 cities. The `prepaid` plan makes the most revenue, 2,088.45 euros, although it is not the largest in calls. Its price per minute is the highest, 0.15 euros. The `business` plan has 2,290 calls and makes 193.72 euros.
+
+#### `pdbook.report.monthly_report`
+
+```text
+pdbook.report.monthly_report(
+    calls,
+    subs,
+    cells,
+    plans,
+)
+```
+
+The function returns one row for each plan and home city: `calls`, `answered`, `billed_min`, `revenue_eur` and `answer_rate`.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `calls` | required | the call records. `call_id` must be unique | a repeated `call_id` raises `ValueError` |
+| `subs` | required | the subscribers | — |
+| `cells` | required | the cells | — |
+| `plans` | required | the plans with their price per minute | a plan missing from `plans` gives revenue 3,681.87 against 4,245.09: the 20 rows are all there, and no error unless you add a check |
+
+The last step of the chain in `monthly_report` is `sort_values`, so the rows come out in the order of plan and city.
+
+#### `pd.DataFrame.sort_values`
+
+```text
+pd.DataFrame.sort_values(
+    self,
+    by,
+    *,
+    axis=0,
+    ascending=True,
+    inplace=False,
+    kind='quicksort',
+    na_position='last',
+    ignore_index=False,
+    key=None,
+)
+```
+
+The method returns the rows in the order of the values of one or more columns.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `by` | required | a column name or a list of names | a name that is not a column raises `KeyError` |
+| `axis` | `0` | `0` sorts the rows. `1` sorts the columns by the values of a row | — |
+| `ascending` | `True` | the direction, or a list with one direction for each name in `by` | a list of another length than `by` raises `ValueError` |
+| `inplace` | `False` | with `True`, change the table and return `None` | `inplace=True` in a chain returns `None` and breaks it |
+| `kind` | `'quicksort'` | the algorithm. `'stable'` and `'mergesort'` keep the order of equal values. Only used for one sort column | with a list in `by`, `kind` is ignored and the sort is always stable |
+| `na_position` | `'last'` | where the missing values go: `'last'` or `'first'` | — |
+| `ignore_index` | `False` | with `True`, the result gets the labels 0, 1, 2 and so on | — |
+| `key` | `None` | a function that changes the column before the sort. It receives the whole Series | `key=str.lower` raises `TypeError`. Write `key=lambda s: s.str.lower()` |
 
 Three tests prove the function. They are independent of each other:
 
@@ -275,61 +364,51 @@ True False
 - **Failure.** A step that assigns to its argument or returns `None`, such as a method with `inplace=True`, breaks the chain.
 - **Cost.** A copy for each step that changes data. Copy-on-write keeps this cheap: columns that a step does not touch are shared, not copied.
 
-## Reference
+The next block tests the cost line on seven steps. Each step runs on the call records, and NumPy says whether two untouched columns of the result still share memory with the input:
 
 ```python
-import pandas as pd
+import numpy as np
 
-from pdbook.report import monthly_report, require
-from pdbook.sigs import show_signature
+from pdbook.io import load_calls
 
-show_signature(pd.DataFrame.pipe, ["func"])
-show_signature(pd.DataFrame.assign)
-show_signature(pd.DataFrame.query, ["expr"])
-show_signature(pd.DataFrame.sort_values, ["by", "ascending", "kind"])
-show_signature(require)
-show_signature(monthly_report)
+calls = load_calls()
+steps = {
+    "assign": lambda d: d.assign(minutes=d["duration_s"] / 60),
+    "rename": lambda d: d.rename(columns={"codec": "voice_codec"}),
+    "astype": lambda d: d.astype({"roaming": "int8"}),
+    "reset_index": lambda d: d.reset_index(drop=True),
+    "query": lambda d: d.query("status == 'answered'"),
+    "sort_values": lambda d: d.sort_values("start"),
+    "head": lambda d: d.head(100),
+}
+for name, step in steps.items():
+    out = step(calls)
+    shared = [bool(np.shares_memory(calls[c].to_numpy(), out[c].to_numpy())) for c in ["call_id", "duration_s"]]
+    print(f"{name:12s} shares call_id and duration_s: {shared}")
 ```
 
 ```text
-NDFrame.pipe(
-    func: 'Callable[Concatenate[Self, P], T] | tuple[Callable[..., T], str]'
-)  # 3 more parameters
-DataFrame.assign(
-    self
-    **kwargs
-)
-DataFrame.query(
-    expr: 'str'
-)  # 8 more parameters
-DataFrame.sort_values(
-    by: 'IndexLabel'
-    ascending: 'bool | list[bool] | tuple[bool, ...]' = True
-    kind: 'SortKind' = 'quicksort'
-)  # 6 more parameters
-require(
-    df: 'pd.DataFrame'
-    test: 'Callable[[pd.DataFrame], bool]'
-    message: 'str'
-)
-monthly_report(
-    calls: 'pd.DataFrame'
-    subs: 'pd.DataFrame'
-    cells: 'pd.DataFrame'
-    plans: 'pd.DataFrame'
-)
+assign       shares call_id and duration_s: [True, True]
+rename       shares call_id and duration_s: [True, True]
+astype       shares call_id and duration_s: [True, True]
+reset_index  shares call_id and duration_s: [True, True]
+query        shares call_id and duration_s: [False, False]
+sort_values  shares call_id and duration_s: [False, False]
+head         shares call_id and duration_s: [False, False]
 ```
 
-| Parameter | Default | What it does here | What goes wrong |
-|---|---|---|---|
-| `pipe(func, *args, **kwargs)` | required | calls `func(df, *args, **kwargs)` and passes on the result | a `func` that returns `None` ends the chain |
-| `assign(**kwargs)` | — | columns from values or from functions of the table | — |
-| `query(expr)` | required | filter by a string | a typo in a name is an error when it runs |
-| `sort_values(by, ascending, kind)` | required, `True`, `'quicksort'` | order the rows | — |
-| `require(df, test, message)` | required | returns `df`, or raises `ValueError(message)` | — |
-| `monthly_report(calls, subs, cells, plans)` | required | 20 rows: plan and city | a plan missing from `plans` gives revenue 3,681.87 against 4,245.09, with no error unless you add a check |
+The first four steps keep the rows, and the result shares the columns that the step did not change: a new column, a new name or a new type for one column costs no copy of the others. The last three steps choose or reorder rows, and each column of the result is a new array. A chain of steps of the first kind is almost free. Put a `query` early in a chain, so that the copies of the later steps are small.
 
-`monthly_report` returns a DataFrame sorted by plan and city. It raises `ValueError` for a repeated `call_id`.
+## Reference
+
+| Callable | Introduced in | Contract |
+|---|---|---|
+| `pd.DataFrame.pipe` | pipe: your own steps | `func(df, ...)` written as a step of the chain |
+| `pd.DataFrame.assign` | The pieces ([Chapter 7](07-new-columns.md) has the block) | new columns; functions see the earlier ones |
+| `pd.DataFrame.query` | The pieces ([Chapter 3](03-selection.md) has the block) | the rows where a condition in a string is true |
+| `pdbook.report.require` | pipe: your own steps | a check as a step: the table, or `ValueError` |
+| `pdbook.report.monthly_report` | Build: monthly_report | one row for each plan and home city |
+| `pd.DataFrame.sort_values` | Build: monthly_report | the rows in the order of column values |
 
 ## What you have now
 

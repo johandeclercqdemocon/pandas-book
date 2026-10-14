@@ -15,7 +15,7 @@
 | read a file with the right types | `read_csv(dtype=..., parse_dates=...)`, one loader function | identifiers are text, timestamps have a zone | [2](02-input-and-output.md) |
 | keep a table small | `category`, small integers, `usecols` | `same_content` is `True` | [4](04-types-and-memory.md) |
 | know why a value is missing | `null_report`, `determinants` | `groupby` totals add up to `len(df)` | [5](05-missing-data.md) |
-| clean text and dates | `.str`, `to_datetime(format="mixed")` | the rejects are listed, not guessed | [6](06-text-and-date-cleanup.md) |
+| clean text and dates | `.str`, `to_datetime(format=...)` with one exact format for each pattern | the rejects are listed, not guessed; `format="mixed", dayfirst=True` swaps ISO dates | [6](06-text-and-date-cleanup.md) |
 | add a rule as a column | `where`, `np.select`, `map` | no row loop, `isna().sum()` after a `map` | [7](07-new-columns.md) |
 | one row for each key | `groupby(...).agg(name=(col, func))` | the sum of the groups equals the table | [8](08-group-by.md) |
 | add columns from a lookup | `merge(how="left", validate="m:1")` | the row count did not change | [9](09-joins.md) |
@@ -178,7 +178,7 @@ for info in sorted(pkgutil.iter_modules(pdbook.__path__), key=lambda i: i.name):
 ```text
 pdbook.bench: best_of, replicate, task_category, task_groupby_apply, task_iterrows, task_itertuples, task_mask_groupby
 pdbook.chunked: make_big_csv, peak_rss_mb, talk_by_caller_chunked, talk_by_caller_whole
-pdbook.clean: clean_contacts, e164, money, name_key
+pdbook.clean: clean_contacts, dates, e164, money, name_key
 pdbook.enrich: enrich
 pdbook.evals: compare_configs, load_runs
 pdbook.features: assert_no_leak, leaky_features, past_features, target

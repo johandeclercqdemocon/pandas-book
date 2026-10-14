@@ -30,7 +30,32 @@ first    [1.0, 2.0, 3.0, 4.0]
 
 The two values of 20 share the ranks 2 and 3. `average` gives both 2.5. `min` gives both 2, and `max` gives both 3. `dense` gives both 2 and the next value 3, with no gap.
 
-`first` breaks the tie by the order of the rows. Choose by the question: "how many are strictly higher" is `min`, and "a number from 1 to n with no ties" is `first`.
+`first` breaks the tie by the order of the rows. Choose by the question. "One more than the number of values that are strictly lower" is `min`: 10, 20, 20, 30 get 1, 2, 2, 4. With `ascending=False` it counts the strictly higher values. "A number from 1 to n with no ties" is `first`.
+
+#### `pd.Series.rank`
+
+```text
+pd.Series.rank(
+    self,
+    axis=0,
+    method='average',
+    numeric_only=False,
+    na_option='keep',
+    ascending=True,
+    pct=False,
+)
+```
+
+The method returns the rank of each value, as `float64`. The DataFrame method ranks each column.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `axis` | `0` | not used for a Series. For a DataFrame, `1` ranks along each row | `axis=1` on a Series raises `ValueError` |
+| `method` | `'average'` | the rule for ties: `'average'`, `'min'`, `'max'`, `'dense'` or `'first'` | for the values 10, 20, 20, 30 the two 20s get 2.5 (`average`), 2 and 2 (`min`), 3 and 3 (`max`), 2 and 2 (`dense`), 2 and 3 (`first`) |
+| `numeric_only` | `False` | for a DataFrame, rank only the number columns | without it, a text column is ranked in alphabetical order |
+| `na_option` | `'keep'` | `'keep'` gives a missing value the rank `NaN`. `'top'` ranks it first, `'bottom'` last | with `'top'`, the missing value is rank 1 and every other rank moves up by one |
+| `ascending` | `True` | `False` gives rank 1 to the largest | — |
+| `pct` | `False` | ranks as a share of 1: the rank divided by the number of values | with `method="dense"`, the share divides by the number of distinct values, not of rows |
 
 ## Top n in each group
 
@@ -66,6 +91,67 @@ In both forms, the order of the rows breaks a tie at the third place: `method="f
 
 The last line shows that every subscriber has at least 3 answered calls: all 600 groups have size 3. A group with fewer than 3 rows shows a smaller size.
 
+#### `pd.core.groupby.DataFrameGroupBy.head`
+
+```text
+pd.core.groupby.DataFrameGroupBy.head(
+    self,
+    n=5,
+)
+```
+
+The method returns the first `n` rows of each group, in the order of the table. `tail` returns the last ones.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `n` | `5` | the number of rows to keep from each group. A negative number keeps all but the last `-n` | the rows are the first ones in the table, not the largest: sort before. `head(-1)` keeps 19,400 rows, all but the last call of each of the 600 callers |
+
+For the top rows of the whole table, without groups, `nlargest` is one call. It sorts only as much as it needs:
+
+```python
+import pandas as pd
+
+from pdbook.io import load_calls
+
+calls = load_calls()
+print(calls.nlargest(3, "duration_s")[["call_id", "caller", "duration_s"]].to_string(index=False))
+
+ties = pd.DataFrame({"v": [5, 9, 9, 7, 9]})
+for keep in ["first", "last", "all"]:
+    print(f"{keep:5s}", ties.nlargest(2, "v", keep=keep).index.tolist())
+```
+
+```text
+ call_id caller  duration_s
+   19895  S0013      3836.0
+    5167  S0576      3354.0
+   10196  S0406      2921.0
+first [1, 2]
+last  [4, 2]
+all   [1, 2, 4]
+```
+
+The three longest calls last 3,836, 3,354 and 2,921 seconds. The small table shows what `keep` does when the value 9 occurs three times and you ask for two rows. `first` takes the first two in the table, `last` takes the last two, and `all` takes all three: you get more rows than you asked for.
+
+#### `pd.DataFrame.nlargest`
+
+```text
+pd.DataFrame.nlargest(
+    self,
+    n,
+    columns,
+    keep='first',
+)
+```
+
+The method returns the `n` rows with the largest values in `columns`, in descending order. `nsmallest` is the opposite.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `n` | required | the number of rows | a column with fewer real values than `n` adds the `NaN` rows at the end |
+| `columns` | required | the column, or a list of columns: the second breaks the ties of the first | a text column raises `TypeError` |
+| `keep` | `'first'` | which rows to keep when values tie at the cut: `'first'`, `'last'` or `'all'` | `'all'` can return more than `n` rows |
+
 ## Running totals
 
 `cumsum`, `cumcount`, `cummax` and `cummin` give a value from the start of the group to the current row. They need an order, so sort first:
@@ -91,6 +177,21 @@ print(len(calls), round(float(calls["talk_min"].sum()), 1))
 ```
 
 The last row of each group carries the total of the group, so the sum of the last rows is the sum of the table. That is the check, and it is the same as the totals check of [Chapter 8](08-group-by.md). Without the `sort_values`, `cumsum` follows the row order of the file, and the "so far" is not "so far in time".
+
+#### `pd.core.groupby.DataFrameGroupBy.cumcount`
+
+```text
+pd.core.groupby.DataFrameGroupBy.cumcount(
+    self,
+    ascending=True,
+)
+```
+
+The method numbers the rows of each group from 0, in the order of the table.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `ascending` | `True` | `True` counts from the first row of the group, `False` from the last | it needs a sorted table to mean "so far in time" |
 
 ## Time since the previous event
 
@@ -205,6 +306,38 @@ session_id  calls               first_start                last_start
 
 The first line is `True`: a shuffled input gives the same table. The second line is `True`: more gap gives fewer or equal sessions. The last block shows the two longest sessions. Both belong to subscriber S0437 and have 8 calls each, the first between 15:38 and 16:51 UTC on 8 September.
 
+The two functions are in [`pdbook/sessions.py`](../pdbook/sessions.py).
+
+#### `pdbook.sessions.sessionize`
+
+```text
+pdbook.sessions.sessionize(
+    calls,
+    gap='30min',
+)
+```
+
+The function returns a copy of `calls` with two new columns: `session` (1, 2, … for each caller) and `session_id` (such as `S0001-001`).
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `calls` | required | the call records, in any order | — |
+| `gap` | `'30min'` | the largest gap inside a session, as text for `pd.Timedelta`. A gap of exactly `gap` stays in the session | text that is not a time raises `ValueError`. The same code without a sort gives 18,151 sessions against 18,420 ([How it works](#how-it-works)) |
+
+#### `pdbook.sessions.session_table`
+
+```text
+pdbook.sessions.session_table(
+    sessions,
+)
+```
+
+The function returns one row for each session: `session_id`, `caller`, `first_start`, `last_start`, `calls` and `talk_s`.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `sessions` | required | the result of `sessionize` | — |
+
 ## How it works
 
 A session number is a running sum of boundary marks. First sort by caller and time. A row then starts a new session when its gap to the previous row is large. The first row of a caller also starts a session.
@@ -248,60 +381,43 @@ The loop and `sessionize` give the same session number for each of the 20,000 ro
 - **Failure.** Rows in the wrong order: the gap to the previous row is then a gap to a different call. Always sort inside the function.
 - **Cost.** One sort, one grouped `diff`, one grouped `cumsum`. The sort is the largest part.
 
-## Reference
+The failure line is easy to see. The next block counts the session starts with the same three steps. It counts once in the order of the file and once after the sort:
 
 ```python
 import pandas as pd
 
-from pdbook.sessions import session_table, sessionize
-from pdbook.sigs import show_signature
+from pdbook.io import load_calls
 
-show_signature(pd.Series.rank, ["method", "ascending", "pct"])
-show_signature(pd.core.groupby.DataFrameGroupBy.cumcount, ["ascending"])
-show_signature(pd.core.groupby.DataFrameGroupBy.head, ["n"])
-show_signature(pd.DataFrame.nlargest, ["n", "columns", "keep"])
-show_signature(sessionize)
-show_signature(session_table)
+
+def count_starts(df, gap="30min"):
+    step = df.groupby("caller")["start"].diff()
+    return int((step.isna() | (step > pd.Timedelta(gap))).sum()), int((step < pd.Timedelta(0)).sum())
+
+
+calls = load_calls()
+print("file order:", count_starts(calls))
+print("sorted    :", count_starts(calls.sort_values(["caller", "start"])))
 ```
 
 ```text
-NDFrame.rank(
-    method: "Literal['average', 'min', 'max', 'first', 'dense']" = 'average'
-    ascending: 'bool' = True
-    pct: 'bool' = False
-)  # 4 more parameters
-GroupBy.cumcount(
-    ascending: 'bool' = True
-)  # 1 more parameters
-GroupBy.head(
-    n: 'int' = 5
-)  # 1 more parameters
-DataFrame.nlargest(
-    n: 'int'
-    columns: 'IndexLabel'
-    keep: 'NsmallestNlargestKeep' = 'first'
-)  # 1 more parameters
-sessionize(
-    calls: 'pd.DataFrame'
-    gap: 'str' = '30min'
-)
-session_table(
-    sessions: 'pd.DataFrame'
-)
+file order: (18151, 403)
+sorted    : (18420, 0)
 ```
 
-| Parameter | Default | What it does here | What goes wrong |
-|---|---|---|---|
-| `rank(method=...)` | `'average'` | the rule for ties | for the values 10, 20, 20, 30 the two 20s get 2.5 (`average`), 2 and 2 (`min`), 3 and 3 (`max`), 2 and 2 (`dense`), 2 and 3 (`first`) |
-| `rank(ascending=...)` | `True` | `False` gives rank 1 to the largest | — |
-| `rank(pct=...)` | `False` | ranks as a share of 1 | — |
-| `cumcount(ascending=...)` | `True` | the position of each row inside its group | needs a sorted table to mean "so far in time" |
-| `head(n)` | `5` | the first n rows of each group | — |
-| `nlargest(n, columns, keep=...)` | required, `'first'` | the n rows with the largest values | — |
-| `sessionize(calls, gap=...)` | required, `'30min'` | adds `session` and `session_id` | the same code without a sort gives 18,151 sessions against 18,420 |
-| `session_table(sessions)` | required | one row for each session | — |
+The file order gives 18,151 sessions, and the sorted table gives 18,420, which is the number of `session_table`. The second number of each line is the count of negative gaps. The 1,000 late records at the end of the file make 403 of them: a call that comes after a later call of the same caller.
 
-`sessionize` returns the table sorted by caller and start, with two more columns. A gap of exactly `gap` stays in the session.
+A negative gap is never larger than 30 minutes, so the late call joins a session in which it does not belong. The result has fewer sessions and no error. This is why `sessionize` sorts inside the function and does not trust its caller.
+
+## Reference
+
+| Callable | Introduced in | Contract |
+|---|---|---|
+| `pd.Series.rank` | Rank | the rank of each value; `method` decides ties |
+| `pd.core.groupby.DataFrameGroupBy.head` | Top n in each group | the first `n` rows of each group, in table order |
+| `pd.DataFrame.nlargest` | Top n in each group | the `n` rows with the largest values; `keep` decides ties |
+| `pd.core.groupby.DataFrameGroupBy.cumcount` | Running totals | the position of each row in its group, from 0 |
+| `pdbook.sessions.sessionize` | Build: sessionize | a session number for each call; sorts inside |
+| `pdbook.sessions.session_table` | Build: sessionize | one row for each session |
 
 ## What you have now
 

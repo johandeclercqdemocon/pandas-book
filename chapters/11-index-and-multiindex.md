@@ -46,6 +46,60 @@ True
 
 The index of `by_id` is unique and not sorted. The file has 1,000 late-arriving records at its end ([Chapter 3](03-selection.md)). A list of labels returns the rows in the order of the list, so `[7, 5]` gives call 7 first. The index is not sorted, and `sort_index` fixes that.
 
+`sort_index` has its block in [Chapter 3](03-selection.md). The other two follow.
+
+#### `pd.DataFrame.set_index`
+
+```text
+pd.DataFrame.set_index(
+    self,
+    keys,
+    *,
+    drop=True,
+    append=False,
+    inplace=False,
+    verify_integrity=<no_default>,
+)
+```
+
+The method returns the table with one or more columns, or arrays, as the index.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `keys` | required | a column name, a list of names, or an array or `Index` of the same length | a name that is not a column raises `KeyError`. A repeated label is accepted: the pair `(caller, start)` has one repeated label |
+| `drop` | `True` | remove the column after it moves into the index | — |
+| `append` | `False` | `True` keeps the old index and adds the new key as a second level | with `True`, the old `RangeIndex` stays as the first level |
+| `inplace` | `False` | with `True`, change the table and return `None` | — |
+| `verify_integrity` | `<no_default>` | `True` raises `ValueError` for a repeated label | any value warns with `Pandas4Warning`: the parameter goes away in pandas 4. Use `index.is_unique` |
+
+#### `pd.DataFrame.reset_index`
+
+```text
+pd.DataFrame.reset_index(
+    self,
+    level=None,
+    *,
+    drop=False,
+    inplace=False,
+    col_level=0,
+    col_fill='',
+    allow_duplicates=<no_default>,
+    names=None,
+)
+```
+
+The method moves the index, or some levels of it, back into columns, and gives the table a new `RangeIndex`.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `level` | `None` | the levels to move. With `None`, all of them | — |
+| `drop` | `False` | `True` throws the old index away | `False` adds it back as a column. An index with no name becomes a column called `index` |
+| `inplace` | `False` | with `True`, change the table and return `None` | — |
+| `col_level` | `0` | for columns with several levels: the level that gets the name | — |
+| `col_fill` | `''` | for columns with several levels: the label of the other levels. `None` repeats the name | — |
+| `allow_duplicates` | `<no_default>` | `True` allows a column name that already exists | the name of an existing column raises `ValueError`: `cannot insert k, already exists` |
+| `names` | `None` | new names for the columns that the index becomes | — |
+
 Lookup by label is fast. A boolean mask scans the whole column for each lookup:
 
 ```python
@@ -73,7 +127,7 @@ assert a == b and t_mask / t_index > 3
 ```text
 # output varies
 True
-index 18.1 ms, mask 163.1 ms, ratio 9x
+index 13.9 ms, mask 168.1 ms, ratio 12x
 ```
 
 The block prints the time of 500 single lookups by the index and by mask. The numbers depend on your hardware. The assertion fails if the index is not at least 3 times faster on yours. If you look up many labels at once, use one `loc` with a list of labels: `by_id.loc[ids]` is a single operation.
@@ -125,6 +179,42 @@ print(hours.reindex(range(8, 16), fill_value=0).to_dict())
 
 `loc` with a missing label raises `KeyError`. `reindex` does not. This is the tool for "I want all 24 hours, even the hours without calls", which is what `traffic_grid` did in [Chapter 10](10-pivot-and-melt.md).
 
+#### `pd.DataFrame.reindex`
+
+```text
+pd.DataFrame.reindex(
+    self,
+    labels=None,
+    *,
+    index=None,
+    columns=None,
+    axis=None,
+    method=None,
+    copy=<no_default>,
+    level=None,
+    fill_value=nan,
+    limit=None,
+    tolerance=None,
+)
+```
+
+The method returns the rows, or the columns, for exactly the labels that you give, in that order.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `labels` | `None` | the new labels for the axis that `axis` names | — |
+| `index` | `None` | the new row labels | a label that is not there gives a row of `NaN`, and an `int64` column becomes `float64`. `loc` raises `KeyError` |
+| `columns` | `None` | the new column labels | a name that is not there gives a column of `NaN` |
+| `axis` | `None` | the axis for `labels`: `0` or `'index'`, `1` or `'columns'` | — |
+| `method` | `None` | how to fill a new label: `'ffill'`, `'bfill'` or `'nearest'` from the labels around it | on an unsorted index it gives `NaN` and no error. `get_indexer` raises in the same case |
+| `copy` | `<no_default>` | ignored since pandas 3.0 | any value warns with `Pandas4Warning` |
+| `level` | `None` | for a MultiIndex, the level that the labels match | — |
+| `fill_value` | `nan` | the value for a new label. `fill_value=0` keeps an integer column as integers | — |
+| `limit` | `None` | the largest number of new labels in a row that `method` fills | — |
+| `tolerance` | `None` | the largest distance between a new label and the label that fills it | — |
+
+An index with a repeated label cannot be reindexed: it raises `ValueError`, because one label must then give several rows.
+
 ## Alignment in arithmetic
 
 An operator aligns on the index. A missing label gives `NaN`. The method form has `fill_value`:
@@ -144,6 +234,27 @@ print(a.add(b, fill_value=0).tolist())
 ```
 
 The sum has a `NaN` at the label that only `a` has. `add(b, fill_value=0)` treats the missing label as 0 and keeps the value 1. This is correct for counts, where a missing label means "none". It is wrong for a price, where a missing label means "unknown".
+
+#### `pd.Series.add`
+
+```text
+pd.Series.add(
+    self,
+    other,
+    level=None,
+    fill_value=None,
+    axis=0,
+)
+```
+
+The method is the operator `+` with options. `sub`, `mul` and `div` have the same parameters.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `other` | required | a Series, a number, or a list of the same length | a list of another length raises `ValueError`. A list does not align: it goes by position |
+| `level` | `None` | for a MultiIndex, the level on which to match the labels of `other` | — |
+| `fill_value` | `None` | the value for a label that one side does not have, before the add | it also replaces a `NaN` that is already in one side: at a label where `a` holds `NaN` and `b` holds 10, the result is 10. A label that both sides lack stays `NaN` |
+| `axis` | `0` | not used for a Series. A Series has only axis 0, and `axis=1` raises `ValueError` | — |
 
 ## MultiIndex: several levels
 
@@ -189,6 +300,27 @@ print(flat.head(2).to_dict("records"))
 ```
 
 For most work, prefer `reset_index` and ordinary columns after a `groupby`. A column is easy to filter, to join and to write. Keep the MultiIndex for a final table that a person reads, or for repeated `loc` lookups on a table.
+
+#### `pd.DataFrame.xs`
+
+```text
+pd.DataFrame.xs(
+    self,
+    key,
+    axis=0,
+    level=None,
+    drop_level=True,
+)
+```
+
+The method returns the rows for one value of one index level, a cross-section.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `key` | required | the value to select, or a tuple of values for several levels | a value that is not in the level raises `KeyError` |
+| `axis` | `0` | `0` selects rows, `1` selects columns | — |
+| `level` | `None` | the level of `key`, by name or number. With `None`, the first levels | — |
+| `drop_level` | `True` | remove the selected level from the result | with `True`, the result does not say which value you selected. `drop_level=False` keeps it |
 
 ## Sorted or not
 
@@ -253,6 +385,20 @@ The fourth line is a surprise. The index `(caller, start)` has one duplicate lab
 
 Put `index_audit` in the first lines of a function that assumes a sorted or unique index. An `assert audit["unique"]` is one line, and it turns a wrong answer into a stop.
 
+#### `pdbook.indexcheck.index_audit`
+
+```text
+pdbook.indexcheck.index_audit(
+    df,
+)
+```
+
+The function returns a dict with seven facts about the index of `df`: `levels`, `names`, `dtype`, `unique`, `sorted`, `duplicate_labels` and `has_missing`.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `df` | required | any DataFrame or Series with an index | — |
+
 ## How it works
 
 An `Index` is an array of labels with a lookup engine. The first call to `get_loc` builds the engine: a hash table for any index, and a binary search for an index that is unique and sorted. Later calls reuse it.
@@ -295,7 +441,7 @@ print(rebuilt == multi.tolist())
 # output varies
 True True
 12344 12344
-first lookup 310 us, later lookups 0.4 us
+first lookup 390 us, later lookups 0.5 us
 [[False, True], ['answered', 'busy', 'failed', 'noanswer']]
 [[0, 0, 0, 0, 1, 1, 1, 1], [0, 1, 2, 3, 0, 1, 2, 3]]
 True
@@ -303,77 +449,73 @@ True
 
 The sorted unique index answers with `get_loc` and with `searchsorted`, and both give 12,344 (the position of the call number 12,345). The block prints the time of the first lookup on a new index and of the later ones. The first builds the hash table, and the assertion fails if it is not at least five times slower than the later ones. The `MultiIndex` of a `groupby` on `roaming` and `status` has two levels of 2 and 4 values, and 8 rows of codes. Rebuilding the tuples from the levels and the codes gives the same tuples.
 
+#### `pd.Index.get_loc`
+
+```text
+pd.Index.get_loc(
+    self,
+    key,
+)
+```
+
+The method returns the position of one label: an integer, a slice or a boolean mask.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `key` | required | the label | a label that is not there raises `KeyError`. A repeated label returns a slice or a mask, not an integer ([Chapter 3](03-selection.md)) |
+
 - **Invariant.** A lookup in a unique index is one hash probe, after a build that happens once.
 - **Failure.** A non-unique index returns a slice or a mask, and a code that expects one row gets several.
 - **Cost.** The build of the engine, on the first lookup of each new index object. A new index object, for example after `reset_index`, pays it again.
 
-## Reference
+The levels and codes also explain the memory of a MultiIndex. The next block adds the deep memory of the levels, the bytes of the codes and the size of the two level names. It compares the sum with `memory_usage`. Then it makes one lookup, and it measures again. Last, it stores the same 20,000 labels as an index of tuples:
 
 ```python
+import sys
+
 import pandas as pd
 
-from pdbook.indexcheck import index_audit
-from pdbook.sigs import show_signature
+from pdbook.io import load_calls
 
-show_signature(pd.DataFrame.set_index, ["keys", "drop", "verify_integrity"])
-show_signature(pd.DataFrame.reset_index, ["drop", "level", "names"])
-show_signature(pd.DataFrame.reindex, ["labels", "fill_value"])
-show_signature(pd.DataFrame.sort_index, ["level", "ascending"])
-show_signature(pd.Series.add, ["other", "fill_value"])
-show_signature(pd.DataFrame.xs, ["key", "axis", "level"])
-show_signature(pd.Index.get_loc, ["key"])
-show_signature(index_audit)
+multi = load_calls().set_index(["caller", "status"]).sort_index().index
+levels = sum(int(level.memory_usage(deep=True)) for level in multi.levels)
+codes = sum(int(code.nbytes) for code in multi.codes)
+names = sum(sys.getsizeof(name) for name in multi.names)
+before = int(multi.memory_usage(deep=True))
+print(f"levels {levels:,} + codes {codes:,} + names {names} = {levels + codes + names:,}   memory_usage {before:,}")
+print([len(level) for level in multi.levels], [str(code.dtype) for code in multi.codes])
+
+multi.get_loc(("S0001", "answered"))
+after = int(multi.memory_usage(deep=True))
+print(f"after one lookup {after:,} (+{after - before:,})")
+
+tuples = pd.Index(multi.tolist(), tupleize_cols=False)
+print(f"as tuples {int(tuples.memory_usage(deep=True)):,}")
 ```
 
 ```text
-DataFrame.set_index(
-    keys
-    drop: 'bool' = True
-    verify_integrity: 'bool | lib.NoDefault' = <no_default>
-)  # 3 more parameters
-DataFrame.reset_index(
-    level: 'IndexLabel | None' = None
-    drop: 'bool' = False
-    names: 'Hashable | Sequence[Hashable] | None' = None
-)  # 5 more parameters
-DataFrame.reindex(
-    labels=None
-    fill_value: 'Scalar | None' = nan
-)  # 9 more parameters
-DataFrame.sort_index(
-    level: 'IndexLabel | None' = None
-    ascending: 'bool | Sequence[bool]' = True
-)  # 8 more parameters
-Series.add(
-    other
-    fill_value=None
-)  # 3 more parameters
-NDFrame.xs(
-    key: 'IndexLabel'
-    axis: 'Axis' = 0
-    level: 'IndexLabel | None' = None
-)  # 2 more parameters
-Index.get_loc(
-    key
-)  # 1 more parameters
-index_audit(
-    df: 'pd.DataFrame'
-)
+levels 7,934 + codes 60,000 + names 94 = 68,028   memory_usage 68,028
+[600, 4] ['int16', 'int8']
+after one lookup 84,752 (+16,724)
+as tuples 1,280,000
 ```
 
-| Parameter | Default | What it does here | What goes wrong |
-|---|---|---|---|
-| `set_index(keys)` | required | a column or list of columns to use as the index | the pair `(caller, start)` has one repeated label |
-| `set_index(drop=...)` | `True` | remove the column after it moves | — |
-| `reset_index(drop=...)` | `False` | `True` throws the old index away | `False` adds it back as a column |
-| `reindex(labels, fill_value=...)` | `None`, `nan` | the rows for exactly these labels | a label that is not there gives a row of `NaN`, and `loc` raises `KeyError` |
-| `sort_index(level, ascending)` | `None`, `True` | sort by the labels | slicing a MultiIndex that is not sorted raises `UnsortedIndexError` |
-| `add(other, fill_value=...)` | required, `None` | add by label; treat a missing label as this value | `fill_value=0` is right for counts and wrong for prices |
-| `xs(key, level=...)` | required, `None` | one value of one level | — |
-| `get_loc(key)` | required | an integer, a slice or a mask | a repeated label returns a slice or a mask |
-| `index_audit(df)` | required | a dict: levels, names, dtype, unique, sorted, duplicate labels, missing | — |
+The sum is exact. The 600 callers cost 7,875 bytes once, and each row costs only its two codes: 2 bytes of `int16` for the caller and 1 byte of `int8` for the status. After one lookup the same index reports 16,724 bytes more:
 
-`index_audit` returns a dict. On the call records indexed by `(caller, start)`: `unique=False`, `duplicate_labels=1`.
+`memory_usage` includes the hash table of the engine as soon as it exists. The same labels as Python tuples need 1,280,000 bytes, 19 times as much. The block sorts the index first. A lookup on the unsorted index gives a `PerformanceWarning`, the warning form of the `UnsortedIndexError` of [Sorted or not](#sorted-or-not).
+
+## Reference
+
+| Callable | Introduced in | Contract |
+|---|---|---|
+| `pd.DataFrame.set_index` | Set it, reset it, sort it | columns or arrays as the index; repeats are accepted |
+| `pd.DataFrame.reset_index` | Set it, reset it, sort it | the index back to columns, and a new `RangeIndex` |
+| `pd.DataFrame.sort_index` | Set it, reset it, sort it ([Chapter 3](03-selection.md) has the block) | the rows in the order of their labels |
+| `pd.DataFrame.reindex` | reindex: choose the labels you want | exactly the given labels; a new label gives `NaN` |
+| `pd.Series.add` | Alignment in arithmetic | `+` with `fill_value` and `level` |
+| `pd.DataFrame.xs` | MultiIndex: several levels | the rows for one value of one level |
+| `pdbook.indexcheck.index_audit` | Build: index_audit | seven facts about an index, as a dict |
+| `pd.Index.get_loc` | How it works | the position of one label: an integer, a slice or a mask |
 
 ## What you have now
 

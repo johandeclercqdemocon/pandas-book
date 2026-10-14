@@ -35,7 +35,25 @@ print(total, seconds < 1.0)
 499999500000 True
 ```
 
-Time the part that you want to improve, and not the load of the file. Time it on the size of the real data: the ratio between two methods changes with the number of rows ([Chapter 7](07-new-columns.md) shows a larger ratio at 20,000 rows than at 2,000 rows).
+Time the part that you want to improve, and not the load of the file. Time it on the size of the real data: the ratio between two methods changes with the number of rows. The section [How it works](#how-it-works) measures the bill of [Chapter 7](07-new-columns.md) at three sizes.
+
+The function `best_of` and the other helpers of this chapter are in [`pdbook/bench.py`](../pdbook/bench.py).
+
+#### `pdbook.bench.best_of`
+
+```text
+pdbook.bench.best_of(
+    fn,
+    repeat=3,
+)
+```
+
+The function runs `fn()` `repeat` times and returns `(seconds, result)`: the time of the fastest run and the result of the last run.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `fn` | required | a function with no arguments | the first run includes warm-up, such as the build of a hash table. With `repeat=1`, that is the time you get |
+| `repeat` | `3` | the number of runs | — |
 
 ## One task, five ways
 
@@ -78,7 +96,7 @@ assert seconds["itertuples"] / seconds["mask+groupby"] > 5
 ```text
 # output varies
 100000 600
-iterrows=2.874s itertuples=0.575s groupby.apply=0.434s mask+groupby=0.011s category=0.014s
+iterrows=3.091s itertuples=0.598s groupby.apply=0.429s mask+groupby=0.013s category=0.018s
 ```
 
 The five give the same 600 totals. The block prints the times of one run. Two assertions fail on your machine in these cases. `iterrows` is not more than 20 times slower than the mask with `groupby`.
@@ -90,6 +108,65 @@ Two things are worth a second look.
 First, `itertuples` was between 2.8 and 6.2 times faster than `iterrows` in every run that I made. The column form was faster than both by a large factor. `itertuples` avoids the creation of a Series for each row, and it still runs Python code for each row. If you must loop, loop over tuples.
 
 Second, the `category` rung is not faster than the plain mask in the block. It converts two columns on every call, and the conversion costs more than it saves. The next section separates the two.
+
+#### `pd.DataFrame.iterrows`
+
+```text
+pd.DataFrame.iterrows(
+    self,
+)
+```
+
+The method yields a pair `(label, Series)` for each row. It takes no parameters. Each row becomes a new Series, and a Series has one dtype: `object` for the call records, which mix text and numbers.
+
+For a row of numbers only, the integers become floats. An integer above 2^53 then loses its last digit: 9007199254740993 comes back as 9007199254740992, with no warning.
+
+#### `pd.DataFrame.itertuples`
+
+```text
+pd.DataFrame.itertuples(
+    self,
+    index=True,
+    name='Pandas',
+)
+```
+
+The method yields a named tuple for each row. The values keep the types of their columns.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `index` | `True` | put the row label first, as the field `Index` | — |
+| `name` | `'Pandas'` | the name of the named tuple type. `None` yields plain tuples, which are faster | a column name that is not a Python name, such as `my col` or `class`, becomes `_1`, `_2` and so on: `row.class` does not exist |
+
+#### `pdbook.bench.replicate`
+
+```text
+pdbook.bench.replicate(
+    df,
+    times,
+)
+```
+
+The function returns `times` copies of `df` stacked, with a new `call_id` that is unique.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `df` | required | the call records | — |
+| `times` | required | the number of copies | `times=0` raises `ValueError: No objects to concatenate` |
+
+#### `pdbook.bench.task_mask_groupby`
+
+```text
+pdbook.bench.task_mask_groupby(
+    df,
+)
+```
+
+The function returns, for each caller, the total talk minutes of answered calls longer than 60 seconds. It is the fourth rung, and the reference that the other rungs must equal.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `df` | required | the call records, or a replica of them | — |
 
 ## Types and speed
 
@@ -123,9 +200,9 @@ assert t_str / t_cat > 1.2 and t_eq_str / t_eq_cat > 3
 ```text
 # output varies
 1000000
-groupby  str 43.2 ms, category 18.6 ms, ratio 2.3x
-compare  str 11.0 ms, category 1.0 ms, ratio 10.9x
-convert caller to category: 35.4 ms
+groupby  str 46.1 ms, category 22.7 ms, ratio 2.0x
+compare  str 11.9 ms, category 1.0 ms, ratio 11.7x
+convert caller to category: 40.1 ms
 ```
 
 On a million rows, two assertions apply. A `groupby` on a category key must be at least 1.2 times faster. An equality test must be at least 3 times faster. The block prints the times and the cost of the conversion of one column.
@@ -163,7 +240,7 @@ assert t_loop / t_once > 3
 ```text
 # output varies
 20000 20000 True
-loop 41.2 ms, once 2.6 ms, ratio 16x
+loop 41.9 ms, once 2.7 ms, ratio 16x
 ```
 
 100 pieces of 200 rows give 20,000 rows in both ways, and the results are equal. The loop is slower by the ratio that the block prints, and the assertion requires at least 3 times. The cost grows faster than the number of pieces, because each step copies all the rows so far. Collect the pieces in a list, and call `concat` once. The same rule holds for `df.loc[len(df)] = row` in a loop, and for `df = df.append(...)` in code that you find on the web.
@@ -198,8 +275,8 @@ print(f"merge wide {t_w * 1000:.0f} ms, narrow {t_n * 1000:.0f} ms")
 
 ```text
 # output varies
-True query 109 ms, mask 68 ms
-merge wide 173 ms, narrow 170 ms
+True query 92 ms, mask 76 ms
+merge wide 176 ms, narrow 175 ms
 ```
 
 `query` was slower than the mask in every run that I made. The documentation says that `query` can use the optional `numexpr` package. That package is not installed here (Chapter 2 prints the check), so this book makes no claim about its gain. Selecting three columns before the merge made no difference, because the merge cost is in the key and not in the columns that come along. A tip is a hypothesis about your data, and the only test is a timing.
@@ -260,62 +337,45 @@ For 100 pieces the loop copies about 50 times as many rows as the single `concat
 - **Failure.** A test with 10 pieces. The square of 10 is small, and the same code with 4,000 pieces is a different program.
 - **Cost.** A copy of every row at every step. Collect pieces in a list and call `concat` once.
 
-## Reference
+A column operation also has a fixed cost: the call into pandas, the checks of types and the build of the result. A loop has no such fixed cost, and it pays for each row. So the ratio between the two depends on the number of rows. The next block times the bill of [Chapter 7](07-new-columns.md) at three sizes:
 
 ```python
-import pandas as pd
+import timeit
 
-from pdbook.bench import best_of, replicate, task_mask_groupby
-from pdbook.sigs import show_signature
+from pdbook.io import load_calls, load_plans, load_subscribers
+from pdbook.rating import rate_loop, rate_vector
 
-show_signature(pd.DataFrame.iterrows)
-show_signature(pd.DataFrame.itertuples, ["index", "name"])
-show_signature(pd.concat, ["objs", "ignore_index"])
-show_signature(pd.Series.astype, ["dtype"])
-show_signature(best_of)
-show_signature(replicate)
-show_signature(task_mask_groupby)
+calls, subs, plans = load_calls(), load_subscribers(), load_plans()
+ratios = {}
+for n in (200, 2_000, 20_000):
+    part = calls.head(n)
+    t_loop = min(timeit.repeat(lambda: rate_loop(part, subs, plans), number=1, repeat=3))
+    t_vector = min(timeit.repeat(lambda: rate_vector(part, subs, plans), number=1, repeat=5))
+    ratios[n] = t_loop / t_vector
+    print(f"{n:6,d} rows: loop {t_loop * 1e3:7.1f} ms, columns {t_vector * 1e3:6.2f} ms, ratio {ratios[n]:4.0f}x")
+assert ratios[20_000] > 3 * ratios[200]
 ```
 
 ```text
-DataFrame.iterrows(
-    self
-)
-DataFrame.itertuples(
-    index: 'bool' = True
-    name: 'str | None' = 'Pandas'
-)  # 1 more parameters
-concat(
-    objs: 'Iterable[Series | DataFrame] | Mapping[HashableT, Series | DataFrame]'
-    ignore_index: 'bool' = False
-)  # 8 more parameters
-NDFrame.astype(
-    dtype
-)  # 3 more parameters
-best_of(
-    fn: 'Callable[[], object]'
-    repeat: 'int' = 3
-)
-replicate(
-    df: 'pd.DataFrame'
-    times: 'int'
-)
-task_mask_groupby(
-    df: 'pd.DataFrame'
-)
+# output varies
+200 rows: loop     7.7 ms, columns   3.79 ms, ratio    2x
+ 2,000 rows: loop    59.1 ms, columns   4.17 ms, ratio   14x
+20,000 rows: loop   577.9 ms, columns   9.00 ms, ratio   64x
 ```
 
-| Parameter | Default | What it does here | What goes wrong |
-|---|---|---|---|
-| `iterrows()` | — | yields `(label, Series)` for each row | each row is a Series: slow, and the dtype is `object` for a mixed table |
-| `itertuples(index=..., name=...)` | `True`, `'Pandas'` | yields a named tuple for each row | still a Python call for each row |
-| `concat(objs, ignore_index=...)` | required, `False` | stack tables | in a loop it copies 1 + 2 + ... + n pieces: 16,039,800 rows for 400 pieces of 200, against 80,000 for one call |
-| `astype("category")` | — | convert a column | the conversion costs time; it pays only when the column is used more than once |
-| `best_of(fn, repeat=...)` | required, `3` | `(seconds, result)` of the fastest run | the first run includes warm-up |
-| `replicate(df, times)` | required | the table repeated, with a unique `call_id` | — |
-| `task_mask_groupby(df)` | required | total talk minutes for each caller, answered calls over 60 s | — |
+The loop grows with the rows: ten times the rows, about ten times the time. The column form hardly grows, because most of its time at these sizes is the fixed cost. The ratio is small for 200 rows and large for 20,000, and the assertion checks that it grows by more than three times. A benchmark on a sample of 200 rows says that the loop is fine. The same code on the real table is the slow job.
 
-`best_of` returns a tuple of a float and the result of the last run.
+## Reference
+
+| Callable | Introduced in | Contract |
+|---|---|---|
+| `pdbook.bench.best_of` | Measure first | the time of the fastest run, and the result |
+| `pd.DataFrame.iterrows` | One task, five ways | `(label, Series)` for each row; mixed rows become `object` |
+| `pd.DataFrame.itertuples` | One task, five ways | a named tuple for each row, with the column types |
+| `pdbook.bench.replicate` | One task, five ways | the table repeated, with a unique `call_id` |
+| `pdbook.bench.task_mask_groupby` | One task, five ways | the reference rung: a mask and a `groupby` |
+| `pd.Series.astype` | Types and speed ([Chapter 4](04-types-and-memory.md) has the block) | a conversion; to `category` it pays only when used more than once |
+| `pd.concat` | Do not grow a table in a loop ([Chapter 9](09-joins.md) has the block) | tables stacked; one call copies each row once |
 
 ## What you have now
 

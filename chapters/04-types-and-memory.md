@@ -53,6 +53,44 @@ caller     260,132 1,080,132    48,007
 
 For `status` the `object` form needs 1,132,354 bytes and the `str` form 312,354 bytes: about a quarter. The `category` form needs 20,191 bytes, because it holds the four words once and a one-byte code for each of 20,000 rows. A column with few distinct values is a very good candidate.
 
+The block used two methods. `memory_usage` counts the bytes, and `astype` changes the type.
+
+#### `pd.DataFrame.memory_usage`
+
+```text
+pd.DataFrame.memory_usage(
+    self,
+    index=True,
+    deep=False,
+)
+```
+
+The method returns the bytes of each column, as a Series. The Series method of the same name has the same two parameters and returns one number.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `index` | `True` | include the index as the first entry, named `Index` | — (132 bytes for a `RangeIndex` of 20,000 rows) |
+| `deep` | `False` | `True` counts the bytes of the text itself, not only the pointers to it | for an `object` column, `deep=False` counts 160,132 bytes and `deep=True` counts 1,132,354. For a `str` column both give 312,354 |
+
+#### `pd.Series.astype`
+
+```text
+pd.Series.astype(
+    self,
+    dtype,
+    copy=<no_default>,
+    errors='raise',
+)
+```
+
+The method returns a new Series with every value converted to `dtype`. The DataFrame method also accepts a dict of column to type.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `dtype` | required | the new type, as a string such as `"int8"` or `"category"`, a NumPy type or a pandas type | `astype("int8")` on 300 gives 44, with no error. `1.7` and `-1.7` become `1` and `-1`. A `NaN` to `"int64"` raises `IntCastingNaNError` |
+| `copy` | `<no_default>` | ignored since pandas 3.0. The result is always a new object that shares memory until a write | any value warns with `Pandas4Warning` |
+| `errors` | `'raise'` | `'raise'`, or `'ignore'` to return the input unchanged when a value does not convert | `errors="ignore"` on `["a", "1"]` to `"int64"` returns the strings, with no message. `errors="coerce"` raises `ValueError`: that option exists only in `to_numeric` |
+
 A category is two arrays: the list of categories and an array of integer codes.
 
 ```python
@@ -104,9 +142,25 @@ TypeError: Cannot setitem on a Categorical with a new category (weird
 
 First, a new value that is not in the categories raises an error. You must add the category first. Second, `groupby` on a category column returns only the categories that occur in pandas 3.0 (`observed=True` is the new default). Write `observed=False` when you want a row for the empty category, for example in a report that has a fixed layout. Third, an ordered category sorts and compares by the order that you gave, not by the alphabet.
 
+#### `pd.CategoricalDtype`
+
+```text
+pd.CategoricalDtype(
+    categories=None,
+    ordered=False,
+)
+```
+
+The class describes a category type: the allowed values and whether they have an order. Pass it to `astype`.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `categories` | `None` | the allowed values, in order. With `None`, `astype` takes the distinct values of the data, sorted | a value of the data that is not in the list becomes `NaN` with only a `Pandas4Warning`. A list with a repeated value or a null raises `ValueError` |
+| `ordered` | `False` | `True` makes `<`, `>` and sorting follow the order of `categories` | with `False`, `status > "a"` raises `TypeError`: only `==` and `!=` work |
+
 ## Integers: small types and silent wrap
 
-A column of whole numbers needs only as many bytes as its largest value. `call_id` goes up to 20,000, so `int16` (range ±32,767) holds it in 2 bytes instead of 8. `pd.to_numeric(..., downcast="integer")` picks the smallest type that fits:
+A column of whole numbers needs only as many bytes as its largest value. `call_id` goes up to 20,000, so `int16` (from -32,768 to 32,767) holds it in 2 bytes instead of 8. `pd.to_numeric(..., downcast="integer")` picks the smallest type that fits:
 
 ```python
 import numpy as np
@@ -159,6 +213,26 @@ There are four different results:
 - A Python scalar that is out of range raises an error.
 
 The silent cases are the dangerous ones. Narrow an integer column only when you know the range of the data. Test the range with `min()` and `max()` before you convert. The function `to_numeric(downcast=...)` does this check for you.
+
+#### `pd.to_numeric`
+
+```text
+pd.to_numeric(
+    arg,
+    errors='raise',
+    downcast=None,
+    dtype_backend=<no_default>,
+)
+```
+
+The function converts text or numbers to a numeric type. It works on one value, a list or a Series.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `arg` | required | a value, a list, an array or a Series | — |
+| `errors` | `'raise'` | `'raise'` stops at the first value that is not a number. `'coerce'` makes it `NaN` | `'coerce'` hides every bad value, and a count of the new `NaN` is the only trace. `errors="ignore"` raises `ValueError` in pandas 3.0 |
+| `downcast` | `None` | `'integer'`, `'signed'`, `'unsigned'` or `'float'`: the smallest type of that kind that holds every value | — (`call_id`: 160,132 → 40,132 bytes). A column with a `NaN` stays `float64` with `downcast="integer"` |
+| `dtype_backend` | `<no_default>` | not set gives NumPy types. `'numpy_nullable'` gives a type that holds a gap | with the default, `["1", None]` becomes `float64`. With `'numpy_nullable'`, it is `Int64` |
 
 ## Missing integers: the nullable types
 
@@ -237,6 +311,24 @@ print(small.dtypes.astype(str).to_dict())
 {'call_id': 'int16', 'start': 'datetime64[us, UTC]', 'caller': 'category', 'callee': 'str', 'duration_s': 'Int16', 'status': 'category', 'cell_id': 'category', 'codec': 'category', 'roaming': 'bool'}
 ```
 
+#### `pdbook.shrink.shrink`
+
+```text
+pdbook.shrink.shrink(
+    df,
+    max_unique_share=0.5,
+    float_to_int=False,
+)
+```
+
+The function returns a copy of `df` with smaller types. It never changes `df`.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `df` | required | any DataFrame | — |
+| `max_unique_share` | `0.5` | the largest share of distinct values for a text column to become `category` | `callee` (73% distinct) stays `str`. With `0.8`, it becomes a category that saves little ([When not to shrink](#when-not-to-shrink)) |
+| `float_to_int` | `False` | `True` turns float columns of whole numbers into a nullable integer | `duration_s`: 160,132 → 60,132 bytes |
+
 The table uses 39% of its memory after the change. The columns `callee` and `start` stay as they were. `callee` has 14,617 distinct values in 20,000 rows, which is more than the limit of 50% in `max_unique_share`. `shrink` leaves it as text.
 
 The next section measures what a category saves here. The module [`pdbook/shrink.py`](../pdbook/shrink.py) also holds `memory_report` and `same_content`. The second one is the test: it casts the small table back to the original dtypes and compares it with the original.
@@ -264,6 +356,38 @@ cell_id                     str             category
 codec                       str             category
 roaming                    bool                 bool
 ```
+
+#### `pdbook.shrink.memory_report`
+
+```text
+pdbook.shrink.memory_report(
+    before,
+    after,
+)
+```
+
+The function returns one row for each column: the deep bytes before and after, and the dtype change.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `before` | required | the original table | — |
+| `after` | required | the small table, with the same columns | a column that is only in `before` gives a gap in the `after` column |
+
+#### `pdbook.shrink.same_content`
+
+```text
+pdbook.shrink.same_content(
+    before,
+    after,
+)
+```
+
+The function casts `after` back to the dtypes of `before` and compares the two with `assert_frame_equal`.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `before` | required | the original table | — |
+| `after` | required | the small table | — |
 
 `same_content` returns `True`. The two tables say the same, and one needs less than half the memory. Write this test every time you shrink a table.
 
@@ -352,71 +476,49 @@ The codes are `int8`, one byte for each of 20,000 rows. The four categories cost
 - **Failure.** A dtype that is too small wraps around without an error.
 - **Cost.** A category needs a lookup of codes when you display or join. A column with nearly as many categories as rows saves little.
 
-## Reference
+A `str` column has a layout too, and it explains the 312,354 bytes of `status` in the first table. pyarrow keeps all the text of the column in one buffer of bytes, one value after the other. A second buffer holds an 8-byte offset for each row: the place where its text starts. A column with gaps has a third buffer, one bit for each row, that says which rows are missing.
+
+The model is therefore 8 bytes for each row, the UTF-8 bytes of the text and, with gaps, one bit for each row:
 
 ```python
 import pandas as pd
 
-from pdbook.shrink import memory_report, same_content, shrink
-from pdbook.sigs import show_signature
+from pdbook.io import load_calls
 
-show_signature(pd.to_numeric, ["errors", "downcast"])
-show_signature(pd.Series.astype, ["dtype", "errors"])
-show_signature(pd.DataFrame.memory_usage, ["index", "deep"])
-show_signature(pd.CategoricalDtype, ["categories", "ordered"])
-show_signature(shrink)
-show_signature(memory_report)
-show_signature(same_content)
+calls = load_calls()
+for col in ["status", "codec", "cell_id", "caller"]:
+    s = calls[col]
+    rows = len(s)
+    text = int(s.str.encode("utf-8").str.len().sum())
+    bitmap = rows // 8 if s.isna().any() else 0
+    model = 8 * rows + text + bitmap
+    real = int(s.memory_usage(index=False, deep=True))
+    print(f"{col:8s} {8 * rows:>7,d} + {text:>7,d} + {bitmap:>5,d} = {model:>7,d}   "
+          f"memory_usage {real:>7,d}   characters {int(s.str.len().sum()):>7,d}")
 ```
 
 ```text
-to_numeric(
-    errors: 'DateTimeErrorChoices' = 'raise'
-    downcast: "Literal['integer', 'signed', 'unsigned', 'float'] | None" = None
-)  # 2 more parameters
-NDFrame.astype(
-    dtype
-    errors: 'IgnoreRaise' = 'raise'
-)  # 2 more parameters
-DataFrame.memory_usage(
-    index: 'bool' = True
-    deep: 'bool' = False
-)  # 1 more parameters
-CategoricalDtype(
-    categories=None
-    ordered: 'Ordered' = False
-)
-shrink(
-    df: 'pd.DataFrame'
-    max_unique_share: 'float' = 0.5
-    float_to_int: 'bool' = False
-)
-memory_report(
-    before: 'pd.DataFrame'
-    after: 'pd.DataFrame'
-)
-same_content(
-    before: 'pd.DataFrame'
-    after: 'pd.DataFrame'
-)
+status   160,000 + 152,222 +     0 = 312,222   memory_usage 312,222   characters 152,222
+codec    160,000 +  78,783 + 2,500 = 241,283   memory_usage 241,283   characters  78,783
+cell_id  160,000 + 141,561 + 2,500 = 304,061   memory_usage 304,061   characters 138,061
+caller   160,000 + 100,000 +     0 = 260,000   memory_usage 260,000   characters 100,000
 ```
 
-| Parameter | Default | What it does here | What goes wrong |
-|---|---|---|---|
-| `to_numeric(errors=...)` | `'raise'` | what to do with text that is not a number: raise, or `'coerce'` to `NaN` | — |
-| `to_numeric(downcast=...)` | `None` | `'integer'` picks the smallest integer type that holds every value | — (`call_id`: 160,132 → 40,132 bytes) |
-| `astype(dtype)` | required | convert to this type | `astype("int8")` on 300 gives 44, with no error |
-| `astype(errors=...)` | `'raise'` | what to do when a value does not convert; the printed type allows `'raise'` and `'ignore'` | — |
-| `memory_usage(deep=...)` | `False` | `True` counts the bytes of the text itself | — |
-| `memory_usage(index=...)` | `True` | include the index | 132 bytes for a `RangeIndex` of 20,000 rows |
-| `CategoricalDtype(categories=...)` | `None` | the allowed values, in order | a value outside the list raises `TypeError` on assignment |
-| `CategoricalDtype(ordered=...)` | `False` | `True` makes comparison and sorting follow the order | — |
-| `shrink(df, max_unique_share=...)` | `0.5` | the largest share of distinct values for a text column to become `category` | `callee` (73% distinct) stays `str` |
-| `shrink(df, float_to_int=...)` | `False` | `True` turns whole-number floats into a nullable integer | `duration_s`: 160,132 → 60,132 bytes |
-| `memory_report(before, after)` | required | bytes for each column, before and after | — |
-| `same_content(before, after)` | required | `True` when `after`, cast back, equals `before` | — |
+The model gives the number of `memory_usage` to the byte for all four columns. The offsets are the largest part for short text: 160,000 bytes for 20,000 rows, more than the text of `status` itself. This is why a category saves so much on a short repeated word.
 
-`shrink` returns a new DataFrame and does not change its argument.
+Look at `cell_id`: the text has 138,061 characters and 141,561 bytes. The names of the cells in Liège have the letter `È`, and UTF-8 stores it in two bytes. A count of characters is not a count of bytes.
+
+## Reference
+
+| Callable | Introduced in | Contract |
+|---|---|---|
+| `pd.DataFrame.memory_usage` | Text: str, object and category | bytes for each column; `deep=True` counts the text of `object` columns |
+| `pd.Series.astype` | Text: str, object and category | every value converted to one type; a narrow integer wraps without an error |
+| `pd.CategoricalDtype` | Text: str, object and category | a category type: allowed values and their order |
+| `pd.to_numeric` | Integers: small types and silent wrap | text or numbers to a numeric type, with an optional downcast that checks the range |
+| `pdbook.shrink.shrink` | Build: shrink | a copy with smaller types |
+| `pdbook.shrink.memory_report` | Build: shrink | bytes for each column, before and after |
+| `pdbook.shrink.same_content` | Build: shrink | `True` when the small table, cast back, equals the original |
 
 ## What you have now
 

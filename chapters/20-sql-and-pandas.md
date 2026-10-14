@@ -56,6 +56,84 @@ print(back.dtypes.astype(str).to_dict())
 
 `parse_dates` converts the text to timestamps. A column that holds 0 and 1 and means a boolean needs `astype(bool)`. [Chapter 2](02-input-and-output.md) made the same point: a format with weak types needs types on the way out.
 
+#### `pd.DataFrame.to_sql`
+
+```text
+pd.DataFrame.to_sql(
+    self,
+    name,
+    con,
+    *,
+    schema=None,
+    if_exists='fail',
+    index=True,
+    index_label=None,
+    chunksize=None,
+    dtype=None,
+    method=None,
+)
+```
+
+The method writes the table into a database table, and returns the number of rows written.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `name` | required | the name of the database table | — |
+| `con` | required | a connection: a `sqlite3` connection, an SQLAlchemy engine or an ADBC connection | — |
+| `schema` | `None` | the schema of the table, for a database that has schemas | — |
+| `if_exists` | `'fail'` | what to do when the table exists: `'fail'`, `'replace'`, `'append'`, or `'delete_rows'`, which empties the table and keeps its definition | `fail` raises `ValueError` on a second run. `append` doubles the rows on a second run, with no error |
+| `index` | `True` | write the index as a column | `index=True` adds a column `index` |
+| `index_label` | `None` | the name of the index column | — |
+| `chunksize` | `None` | the rows in each batch. With `None`, all rows at one time | — |
+| `dtype` | `None` | the column types in the database: a dict of column to type. For `sqlite3`, a type name such as `"TEXT"` | — |
+| `method` | `None` | the insert form: `None` for one row in each statement, `'multi'` for many rows in one statement, or a function | — |
+
+A timestamp with a zone is written as text, such as `2026-09-01 10:00:00+00:00`, and a boolean as the integer 1 or 0.
+
+#### `pd.read_sql_query`
+
+```text
+pd.read_sql_query(
+    sql,
+    con,
+    index_col=None,
+    coerce_float=True,
+    params=None,
+    parse_dates=None,
+    chunksize=None,
+    dtype=None,
+    dtype_backend=<no_default>,
+)
+```
+
+The function runs a query and returns the result as a DataFrame.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `sql` | required | the query text | — |
+| `con` | required | the connection | — |
+| `index_col` | `None` | a column, or columns, to use as the index | — |
+| `coerce_float` | `True` | convert numbers of other types, such as `decimal.Decimal`, to float | — |
+| `params` | `None` | the values for the placeholders: a tuple for `?`, a dict for `:name` | formatting the value into the text breaks on `O'Neil` and can change the query |
+| `parse_dates` | `None` | columns to convert to timestamps, or a dict of column to format | without it, `start` is text |
+| `chunksize` | `None` | return an iterator of tables of this many rows | the result is an iterator, used up after one pass ([Chapter 19](19-data-larger-than-memory.md)) |
+| `dtype` | `None` | a type, or a dict of column to type, for the result | — |
+| `dtype_backend` | `<no_default>` | not set gives NumPy types. `'numpy_nullable'` keeps an integer column with a null as `Int64` | with the default, an integer column with a null becomes `float64` |
+
+#### `pdbook.sqlbridge.build_database`
+
+```text
+pdbook.sqlbridge.build_database(
+    conn=None,
+)
+```
+
+The function writes the four tables into SQLite, with `start` as ISO text, and returns the connection.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `conn` | `None` | the connection to write into. With `None`, a new database in memory | it replaces the four tables if they exist. A second call is not an error, and it removes any index that you made on them |
+
 ## Parameters
 
 Never build a query with string formatting. A value that contains a quote breaks the query, and a value from outside can change it. Pass values with `params`:
@@ -132,6 +210,20 @@ Compare the two side by side. The `JOIN` lines are the two `merge` steps of `enr
 
 `CEIL` is a math function of SQLite. The documentation says that these functions exist from version 3.35 and need a build with them, so the block prints the version that ran. The test says that the two agree. This is the strongest check that a report is right: two implementations in two systems that were written separately.
 
+#### `pdbook.sqlbridge.monthly_report_sql`
+
+```text
+pdbook.sqlbridge.monthly_report_sql(
+    conn,
+)
+```
+
+The function runs `MONTHLY_REPORT_SQL` and returns the report with the dtypes of the pandas version.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `conn` | required | a connection with the four tables of `build_database` | a database without the tables raises `DatabaseError`. `CEIL` is a math function of SQLite: the chapter prints the version that ran (3.50.4) |
+
 ## An index
 
 A database makes a lookup fast with an index, in the same way as a pandas index ([Chapter 11](11-index-and-multiindex.md)):
@@ -166,7 +258,7 @@ assert before == after and t_scan / t_index > 10
 ```text
 # output varies
 500 True
-without index 365 ms, with index 2.3 ms, ratio 160x
+without index 368 ms, with index 1.5 ms, ratio 244x
 ```
 
 The block prints the time of 500 lookups without an index, where each one scans the table, and with an index. The answers are the same. The times depend on the hardware, and the assertion fails if the index is not at least 10 times faster on yours.
@@ -261,52 +353,38 @@ The first line is one failed call without a cell: the id is an integer, the time
 - **Failure.** A type that SQLite does not have (a timestamp, a boolean) comes back as text or integer, and pandas gets `str` or `int64`.
 - **Cost.** A scan costs one pass over the table for each query. An index costs space and time at each insert, and it saves the scan.
 
-## Reference
+The declared type of a column is a preference that SQLite calls the affinity. When a value arrives, SQLite converts it to the class of the affinity if no information is lost. If not, SQLite stores the value as it is. The next block declares a column `INTEGER` and inserts five values:
 
 ```python
+import sqlite3
+
 import pandas as pd
 
-from pdbook.sigs import show_signature
-from pdbook.sqlbridge import build_database, monthly_report_sql
-
-show_signature(pd.DataFrame.to_sql, ["name", "con", "index", "if_exists"])
-show_signature(pd.read_sql_query, ["sql", "con", "params", "parse_dates"])
-show_signature(build_database)
-show_signature(monthly_report_sql)
+conn = sqlite3.connect(":memory:")
+conn.execute("CREATE TABLE t (x INTEGER)")
+conn.executemany("INSERT INTO t VALUES (?)", [("12",), ("abc",), (3.0,), (3.5,), (None,)])
+print(conn.execute("SELECT x, typeof(x) FROM t").fetchall())
+column = pd.read_sql_query("SELECT x FROM t", conn)["x"]
+print(column.dtype, column.tolist())
 ```
 
 ```text
-NDFrame.to_sql(
-    name: 'str'
-    con
-    if_exists: "Literal['fail', 'replace', 'append', 'delete_rows']" = 'fail'
-    index: 'bool' = True
-)  # 6 more parameters
-read_sql_query(
-    sql
-    con
-    params: 'list[Any] | Mapping[str, Any] | None' = None
-    parse_dates: 'list[str] | dict[str, str] | dict[str, dict[str, Any]] | None' = None
-)  # 5 more parameters
-build_database(
-    conn: 'sqlite3.Connection | None' = None
-)
-monthly_report_sql(
-    conn: 'sqlite3.Connection'
-)
+[(12, 'integer'), ('abc', 'text'), (3, 'integer'), (3.5, 'real'), (None, 'null')]
+object [12, 'abc', 3, 3.5, None]
 ```
 
-| Parameter | Default | What it does here | What goes wrong |
-|---|---|---|---|
-| `to_sql(name, con, index=...)` | required, `True` | write a table | `index=True` adds a column `index` |
-| `to_sql(if_exists=...)` | `'fail'` | what to do when the table exists | `fail` raises an error on a second run |
-| `read_sql_query(sql, con)` | required | run a query and return a DataFrame | — |
-| `read_sql_query(params=...)` | `None` | values passed apart from the query text | formatting the value into the text breaks on `O'Neil` and can change the query |
-| `read_sql_query(parse_dates=...)` | `None` | columns to convert to timestamps | without it, `start` is text |
-| `build_database(conn=...)` | `None` | write the four tables into SQLite, in memory when `conn` is not given | — |
-| `monthly_report_sql(conn)` | required | the monthly report as one query | `CEIL` is a math function of SQLite; the chapter prints the version that ran (3.50.4) |
+The text `"12"` became the integer 12, and `3.0` became the integer 3: both convert without loss. The text `abc` and the number `3.5` stayed as they were, in a column that says `INTEGER`. SQLite raised no error.
 
-`read_sql_query` returns a DataFrame. Booleans come back as integers and timestamps as text.
+pandas receives four classes in one column and makes it `object`. A column of a database is not a promise about its values. Check the types after the read, as [Chapter 17](17-data-validation.md) does for a file.
+
+## Reference
+
+| Callable | Introduced in | Contract |
+|---|---|---|
+| `pd.DataFrame.to_sql` | Write a table, read a query | the table written into a database; returns the row count |
+| `pd.read_sql_query` | Write a table, read a query | the result of a query as a DataFrame; values go in `params` |
+| `pdbook.sqlbridge.build_database` | Write a table, read a query | the four tables in SQLite, and the connection |
+| `pdbook.sqlbridge.monthly_report_sql` | The same report in two languages | the monthly report as one query |
 
 ## What you have now
 

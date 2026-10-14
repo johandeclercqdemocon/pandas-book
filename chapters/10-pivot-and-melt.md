@@ -77,6 +77,41 @@ print(t.loc[5].to_dict())
 
 The row `All` gives the total of each status and the total of the table. A check: the last value is 20,000.
 
+#### `pd.DataFrame.pivot_table`
+
+```text
+pd.DataFrame.pivot_table(
+    self,
+    values=None,
+    index=None,
+    columns=None,
+    aggfunc='mean',
+    fill_value=None,
+    margins=False,
+    dropna=True,
+    margins_name='All',
+    observed=True,
+    sort=True,
+    **kwargs,
+)
+```
+
+The method groups the rows by the row keys and the column keys, aggregates each group, and spreads the result as a table.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `values` | `None` | the column or columns to aggregate. With `None`, every other column | with `None`, the result gets one block of columns for each value column, under a second level of column labels |
+| `index` | `None` | the key or keys of the rows | — |
+| `columns` | `None` | the key or keys of the columns | — |
+| `aggfunc` | `'mean'` | how to combine the rows of one cell: a name, a function, a list, or a dict of column to function | a duplicate row is added in silence: 16 repeated rows give a total of 20,016 and not 20,000 ([How it works](#how-it-works)) |
+| `fill_value` | `None` | the value for a cell with no rows | — |
+| `margins` | `False` | `True` adds a row and a column with the aggregate of all rows | with `aggfunc="mean"` the margin is the mean of all rows, not the mean of the cells |
+| `dropna` | `True` | drop a column whose cells are all `NaN`, and drop the rows with a missing key | the status `failed` disappears from a table of mean durations |
+| `margins_name` | `'All'` | the label of the margin row and column | — |
+| `observed` | `True` | for a `category` key, show only the categories that occur | a category with no rows has no row: 4 rows for 5 categories |
+| `sort` | `True` | sort the keys | — |
+| `**kwargs` | — | more keyword arguments for `aggfunc`, such as `q=0.9` for `"quantile"` | — |
+
 ## crosstab: counts and shares
 
 `pd.crosstab` is a `pivot_table` for counts of two columns. It has `normalize`, which turns counts into shares:
@@ -102,6 +137,38 @@ print(n, round(100 * (p * (1 - p) / n) ** 0.5, 1))
 
 Each column adds up to 1. Of the roaming calls, 79.0% are answered, against 77.6% of the other calls. The last line gives the number of roaming calls, 563, and the standard error of the share of 0.790 for that many calls: 1.7 points. The difference of 1.4 points is smaller than one standard error. This table does not show that roaming changes the chance of an answer.
 
+#### `pd.crosstab`
+
+```text
+pd.crosstab(
+    index,
+    columns,
+    values=None,
+    rownames=None,
+    colnames=None,
+    aggfunc=None,
+    margins=False,
+    margins_name='All',
+    dropna=True,
+    normalize=False,
+)
+```
+
+The function counts the rows for each pair of values of two Series, or aggregates a third Series with `aggfunc`.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `index` | required | the values for the rows: a Series, an array, or a list of them | — |
+| `columns` | required | the values for the columns | — |
+| `values` | `None` | a Series to aggregate, instead of a count | `values` without `aggfunc` raises `ValueError` |
+| `rownames` | `None` | names for the row keys | — |
+| `colnames` | `None` | names for the column keys | — |
+| `aggfunc` | `None` | how to aggregate `values`, such as `"mean"` | — |
+| `margins` | `False` | add a row and a column `All` with the totals | — |
+| `margins_name` | `'All'` | the label of the margin row and column | — |
+| `dropna` | `True` | drop the rows with a missing key, and the columns that are all `NaN` | the 277 calls without a cell are not counted: 19,723 against 20,000 with `dropna=False` |
+| `normalize` | `False` | `'columns'` divides each column by its sum, `'index'` each row, `True` or `'all'` the whole table | — |
+
 ## pivot: reshape without aggregating
 
 `pivot` has no `aggfunc`. It assumes that each pair of row key and column key occurs once. When a pair occurs twice, there is no rule to choose, and it raises an error:
@@ -125,6 +192,26 @@ ValueError: Index contains duplicate entries, cannot reshape
 ```
 
 That error is useful. It says that the data are not in the shape that you assumed. Use `pivot` when you know the key is unique, so that a duplicate is a surprise, and use `pivot_table` when you want an aggregate.
+
+#### `pd.DataFrame.pivot`
+
+```text
+pd.DataFrame.pivot(
+    self,
+    *,
+    columns,
+    index=<no_default>,
+    values=<no_default>,
+)
+```
+
+The method reshapes the table with no aggregation: each pair of row key and column key must occur once.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `columns` | required | the column whose values become the column labels | — |
+| `index` | `<no_default>` | the column whose values become the row labels. Not set means the existing index | a pair that occurs twice raises `ValueError` |
+| `values` | `<no_default>` | the column or columns that fill the cells. Not set means every other column | not set gives two levels of column labels: one block for each value column |
 
 ## melt: wide to long
 
@@ -167,6 +254,31 @@ int64
 
 The `reset_index` put the text `weekday` and the integer hours in one set of column labels, so the labels became `object`. A later join with a table that has integer hours finds no match. Convert the column to the type that you want, immediately after the `melt`.
 
+#### `pd.DataFrame.melt`
+
+```text
+pd.DataFrame.melt(
+    self,
+    id_vars=None,
+    value_vars=None,
+    var_name=None,
+    value_name='value',
+    col_level=None,
+    ignore_index=True,
+)
+```
+
+The method stacks columns into two: one with the old column names and one with the values.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `id_vars` | `None` | the columns that stay as they are | — |
+| `value_vars` | `None` | the columns to stack. With `None`, every column that is not in `id_vars` | — |
+| `var_name` | `None` | the name of the column of old column names. With `None`, the name of the column labels, or `variable` | `hour` comes back as `object`. Convert it |
+| `value_name` | `'value'` | the name of the column of values | the name of an existing column raises `ValueError` |
+| `col_level` | `None` | for columns with several levels, the level to use | — |
+| `ignore_index` | `True` | `True` makes a new `RangeIndex`. `False` repeats the old labels | with `False`, the labels repeat: 0, 1, 0, 1 |
+
 ## stack and unstack
 
 `unstack` moves an index level into the columns, and `stack` does the reverse. They work on an index, and they are the tool after a `groupby` with two keys:
@@ -193,6 +305,25 @@ True          445    46      31        41
 ```
 
 A `groupby` with two keys gives a Series with a two-level index. `unstack` moves the last level to the columns, and `unstack(level="roaming")` moves the other one. [Chapter 11](11-index-and-multiindex.md) explains the index.
+
+#### `pd.Series.unstack`
+
+```text
+pd.Series.unstack(
+    self,
+    level=-1,
+    fill_value=None,
+    sort=True,
+)
+```
+
+The method moves one level of a MultiIndex into the columns, and returns a table. `stack` is the reverse.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `level` | `-1` | the level to move, by number or name. `-1` is the last level | — |
+| `fill_value` | `None` | the value for a pair that does not occur | without it, a pair that does not occur is `NaN`, and an integer table becomes `float64` |
+| `sort` | `True` | sort the new column labels | — |
 
 ## Build: the traffic grid
 
@@ -227,6 +358,52 @@ round trip equal
 ```
 
 The busiest cell is Tuesday at 09:00 with 300 calls. Wednesday at 19:00 follows with 288, and Wednesday at 10:00 with 278. Wednesday is the busiest day with 3,836 calls, and the weekend days have 1,745 and 1,718, which is about half. A person reads the grid with the eye, and a program reads the long form. The functions convert between them without loss, and the `assert_frame_equal` shows it.
+
+The three functions are in [`pdbook/traffic.py`](../pdbook/traffic.py).
+
+#### `pdbook.traffic.traffic_grid`
+
+```text
+pdbook.traffic.traffic_grid(
+    calls,
+    tz='Europe/Brussels',
+)
+```
+
+The function returns a table of 7 rows, Monday to Sunday, and 24 columns, one for each local hour, with the number of calls.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `calls` | required | the call records, with a `start` that has a time zone | a `start` with no zone raises `TypeError` |
+| `tz` | `'Europe/Brussels'` | the zone of the hours | the grid in UTC differs in 164 of 168 cells |
+
+#### `pdbook.traffic.to_long`
+
+```text
+pdbook.traffic.to_long(
+    grid,
+)
+```
+
+The function returns one row for each weekday and hour, with the hour as an integer.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `grid` | required | a grid from `traffic_grid` | — |
+
+#### `pdbook.traffic.to_wide`
+
+```text
+pdbook.traffic.to_wide(
+    long,
+)
+```
+
+The function returns the grid again, from the long form.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `long` | required | the long form from `to_long` | a repeated row raises `ValueError` |
 
 ## How it works
 
@@ -265,83 +442,45 @@ The `groupby` gives a Series with a two-level index, one entry for each pair tha
 - **Failure.** A pair that occurs twice in `pivot` has no rule to follow, and it raises an error. In `pivot_table`, it is silently aggregated.
 - **Cost.** The `groupby` pass plus a copy into the 2-D array. A wide result with many empty cells holds `NaN` or 0 for each one.
 
-## Reference
+The failure line is the difference between `pivot` and `pivot_table`, and you can see it. The next block repeats the first 16 rows of the table, as a second load of the same file does. Then it makes the grid in both ways:
 
 ```python
 import pandas as pd
 
-from pdbook.sigs import show_signature
-from pdbook.traffic import to_long, to_wide, traffic_grid
+from pdbook.io import load_calls
 
-show_signature(pd.DataFrame.pivot_table, ["values", "index", "columns", "aggfunc", "fill_value", "margins", "dropna"])
-show_signature(pd.DataFrame.pivot, ["columns", "index", "values"])
-show_signature(pd.crosstab, ["index", "columns", "normalize"])
-show_signature(pd.DataFrame.melt, ["id_vars", "value_vars", "var_name", "value_name"])
-show_signature(pd.Series.unstack, ["level", "fill_value"])
-show_signature(traffic_grid)
-show_signature(to_long)
-show_signature(to_wide)
+calls = load_calls()
+local = calls["start"].dt.tz_convert("Europe/Brussels")
+frame = pd.DataFrame({"weekday": local.dt.dayofweek, "hour": local.dt.hour, "call_id": calls["call_id"]})
+twice = pd.concat([frame, frame.head(16)], ignore_index=True)
+
+grid = twice.assign(n=1).pivot_table(index="weekday", columns="hour", values="n", aggfunc="sum", fill_value=0)
+print(int(grid.to_numpy().sum()), "calls in the grid,", len(calls), "calls in the file")
+try:
+    twice.pivot(index="call_id", columns="hour", values="weekday")
+except ValueError as error:
+    print("pivot: ValueError:", error)
 ```
 
 ```text
-DataFrame.pivot_table(
-    values=None
-    index=None
-    columns=None
-    aggfunc: 'AggFuncType' = 'mean'
-    fill_value=None
-    margins: 'bool' = False
-    dropna: 'bool' = True
-)  # 5 more parameters
-DataFrame.pivot(
-    columns
-    index=<no_default>
-    values=<no_default>
-)  # 1 more parameters
-crosstab(
-    index
-    columns
-    normalize: "bool | Literal[0, 1, 'all', 'index', 'columns']" = False
-)  # 7 more parameters
-DataFrame.melt(
-    id_vars=None
-    value_vars=None
-    var_name=None
-    value_name: 'Hashable' = 'value'
-)  # 3 more parameters
-Series.unstack(
-    level: 'IndexLabel' = -1
-    fill_value: 'Hashable | None' = None
-)  # 2 more parameters
-traffic_grid(
-    calls: 'pd.DataFrame'
-    tz: 'str' = 'Europe/Brussels'
-)
-to_long(
-    grid: 'pd.DataFrame'
-)
-to_wide(
-    long: 'pd.DataFrame'
-)
+20016 calls in the grid, 20000 calls in the file
+pivot: ValueError: Index contains duplicate entries, cannot reshape
 ```
 
-| Parameter | Default | What it does here | What goes wrong |
-|---|---|---|---|
-| `pivot_table(values, index, columns)` | `None` | the cell, the row key and the column key | — |
-| `pivot_table(aggfunc=...)` | `'mean'` | how to combine the rows of one cell | a duplicate row is added in silence: total 20,016 and not 20,000 |
-| `pivot_table(fill_value=...)` | `None` | the value for a cell with no rows | — |
-| `pivot_table(margins=...)` | `False` | `True` adds a row and a column `All` | — |
-| `pivot_table(dropna=...)` | `True` | drop a column that is all `NaN` | the status `failed` disappears from a table of mean durations |
-| `pivot(columns, index, values)` | `index`, `values`: not set | reshape with no aggregation | a pair that occurs twice raises `ValueError` |
-| `crosstab(index, columns)` | required | counts of two columns | — |
-| `crosstab(normalize=...)` | `False` | `"columns"` makes each column add up to 1 | — |
-| `melt(id_vars, value_vars)` | `None` | the columns to keep and the columns to stack | — |
-| `melt(var_name, value_name)` | `None`, `'value'` | names of the two new columns | `hour` comes back as `object`; convert it |
-| `unstack(level, fill_value)` | `-1`, `None` | move an index level to the columns | a pair that does not occur is `NaN` |
-| `traffic_grid(calls, tz=...)` | required, `'Europe/Brussels'` | the 7 by 24 table of calls | the grid in UTC differs in 164 of 168 cells |
-| `to_wide(long)` | required | back to the grid | a repeated row raises `ValueError` |
+`pivot_table` adds the 16 repeated rows to their cells, and the grid has 20,016 calls. Nothing in the result says that 16 of them are copies. `pivot` on the call identifier stops, because the identifier occurs twice. The check after a `pivot_table` is the same as after a `groupby`: compare the total with the number of distinct rows that you expect.
 
-`traffic_grid` returns a DataFrame indexed by weekday names with the columns 0 to 23. `to_long` returns 168 rows.
+## Reference
+
+| Callable | Introduced in | Contract |
+|---|---|---|
+| `pd.DataFrame.pivot_table` | pivot_table: aggregate and spread | a wide table of aggregates; duplicates are aggregated in silence |
+| `pd.crosstab` | crosstab: counts and shares | counts of two columns, optionally as shares |
+| `pd.DataFrame.pivot` | pivot: reshape without aggregating | a wide table with no aggregation; a duplicate pair raises |
+| `pd.DataFrame.melt` | melt: wide to long | columns stacked into a name column and a value column |
+| `pd.Series.unstack` | stack and unstack | an index level moved into the columns |
+| `pdbook.traffic.traffic_grid` | Build: the traffic grid | the 7 by 24 table of calls in local time |
+| `pdbook.traffic.to_long` | Build: the traffic grid | the grid as one row for each weekday and hour |
+| `pdbook.traffic.to_wide` | Build: the traffic grid | the long form back to the grid |
 
 ## What you have now
 

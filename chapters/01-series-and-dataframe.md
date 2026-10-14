@@ -59,6 +59,30 @@ print(fee.iloc[1])
 
 Use `.loc` for labels and `.iloc` for positions. [Chapter 3](03-selection.md) explains both. For now, remember one fact: the label is part of the data, and it does not change when you reorder the Series.
 
+The constructor `pd.Series` made these two Series. Its signature and parameters follow.
+
+#### `pd.Series`
+
+```text
+pd.Series(
+    data=None,
+    index=None,
+    dtype=None,
+    name=None,
+    copy=None,
+)
+```
+
+The constructor makes a Series from values and, if you give them, labels.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `data` | `None` | the values: a list, a NumPy array, a dict or one number. A dict gives its keys as the labels | — |
+| `index` | `None` | the labels. With `None`, the positions 0, 1, 2 and so on, as a `RangeIndex`. With a dict for `data`, it selects keys of the dict | a label that is not a key gives `NaN`, and `int64` becomes `float64`. A list of the wrong length raises `ValueError` |
+| `dtype` | `None` | the type of every value. With `None`, pandas infers it from `data` | `dtype="int64"` on `[1, None]` raises `TypeError`. The type `"Int64"` holds the gap as `<NA>` ([Chapter 5](05-missing-data.md)) |
+| `name` | `None` | the name of the Series. It becomes the column name when the Series goes into a DataFrame | — |
+| `copy` | `None` | with `None`, a NumPy array is copied, and a Series or an Index is not. `copy=False` keeps the array of the caller | with `copy=False`, a later write to the NumPy array changes the Series: `[1, 2, 3]` became `[99, 2, 3]` |
+
 ## The index takes part in arithmetic
 
 NumPy arrays add by position. A Series adds by label. This is the first difference that surprises people, and it is the source of many silent errors.
@@ -115,6 +139,28 @@ DataFrame
 
 One pair of square brackets with a string gives a Series. Two pairs (a list of names) give a DataFrame. This difference matters: many methods exist on both, but they return different shapes.
 
+#### `pd.DataFrame`
+
+```text
+pd.DataFrame(
+    data=None,
+    index=None,
+    columns=None,
+    dtype=None,
+    copy=None,
+)
+```
+
+The constructor makes a table from columns, rows or a 2-D array.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `data` | `None` | a dict of columns, a list of rows, a 2-D NumPy array or another DataFrame | lists of different lengths in a dict raise `ValueError` |
+| `index` | `None` | the row labels. With `None`, a `RangeIndex`, or the union of the labels of the Series in `data` | with a dict of Series, the rows align: a label that a Series does not have gives `NaN`. With a dict of lists, a wrong length raises `ValueError` |
+| `columns` | `None` | the column labels. With a dict for `data`, it selects and orders the keys | a name that is not a key gives a column of `NaN`, and no error |
+| `dtype` | `None` | one type for all the columns. With `None`, each column gets its own type | a dict of types raises `TypeError`. Use `astype` with a dict after the call ([Chapter 4](04-types-and-memory.md)) |
+| `copy` | `None` | with `None`, a dict of data is copied, and in pandas 3.0.6 a 2-D NumPy array is also copied. `copy=False` shares the memory of a 2-D array | the docstring says that `None` does not copy a 2-D array. The run says that it does: `np.shares_memory` is `False` with `None` and `True` with `copy=False` |
+
 ## Read the call records
 
 The file `data/calls.csv` holds 20,000 call detail records for September 2026. One row is one call attempt.
@@ -138,6 +184,8 @@ RangeIndex(start=0, stop=20000, step=1)
 ```
 
 `shape` is a tuple of rows and columns. The index is a `RangeIndex` that pandas made: 0, 1, 2 and so on. The file has no index column, so pandas labels the rows by position.
+
+The function `pd.read_csv` read the file. It has 44 parameters. [Chapter 2](02-input-and-output.md) prints its signature and explains each parameter, because input is the subject of that chapter.
 
 The `info` method gives the dtypes and the number of non-null values for each column in one view:
 
@@ -206,6 +254,20 @@ codec           str   4474       3                   EVS
 roaming        bool      0       2                 False
 ```
 
+#### `pdbook.looks.first_look`
+
+```text
+pdbook.looks.first_look(
+    df,
+)
+```
+
+The function returns one row for each column of `df`, indexed by the column name.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `df` | required | any DataFrame | on an empty table, `df.iloc[0]` raises `IndexError` |
+
 The function builds a DataFrame from a dict of four Series. Each Series has the column names of `df` as its index. Because the indexes are equal, pandas aligns them without any extra code. This is the alignment from the previous section, and here it saves code.
 
 The table tells you five things at once:
@@ -229,6 +291,20 @@ print(headline(pd.read_csv("data/calls.csv")))
 ```text
 20,000 rows x 9 columns, 2.2 MB
 ```
+
+#### `pdbook.looks.headline`
+
+```text
+pdbook.looks.headline(
+    df,
+)
+```
+
+The function returns a string, not a table.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `df` | required | any DataFrame | — |
 
 The memory figure is the deep figure: it counts the bytes of the strings, not only of the pointers to them. Use `memory_usage(deep=True)` whenever you compare two representations of the same table.
 
@@ -276,64 +352,54 @@ The union of the labels is sorted: `w`, `x`, `y`, `z`. The hand-made sum has `na
 - **Failure.** A label on one side only gives `NaN`, and `int64` becomes `float64`.
 - **Cost.** The reindex looks up each label and makes a new array. This is why arithmetic on two different indexes is slower than on two arrays.
 
-## Reference
-
-The signatures below are printed from the installed code, with the parameters that this chapter uses.
+The next block measures that cost. It adds one million values three times: as two NumPy arrays, as two Series with equal labels, and as two Series whose labels are the same set in another order.
 
 ```python
+import timeit
+
+import numpy as np
 import pandas as pd
 
-from pdbook.looks import first_look, headline
-from pdbook.sigs import show_signature
+n = 1_000_000
+rng = np.random.default_rng(0)
+labels = np.arange(n)
+a = pd.Series(rng.random(n), index=labels)
+same = pd.Series(rng.random(n), index=labels)
+shuffled = same.sample(frac=1.0, random_state=0)
 
-show_signature(pd.Series, ["data", "index", "dtype", "name"])
-show_signature(pd.DataFrame, ["data", "index", "columns", "dtype"])
-show_signature(pd.read_csv, ["filepath_or_buffer", "dtype", "nrows"])
-show_signature(first_look)
-show_signature(headline)
+
+def best(f):
+    return min(timeit.repeat(f, number=1, repeat=5))
+
+
+t_np = best(lambda: a.to_numpy() + same.to_numpy())
+t_same = best(lambda: a + same)
+t_shuf = best(lambda: a + shuffled)
+assert t_shuf / t_same > 10
+assert bool(np.allclose((a + shuffled).to_numpy(), (a + same).to_numpy()))
+print(f"NumPy arrays            {t_np * 1e3:6.1f} ms")
+print(f"Series, equal labels    {t_same * 1e3:6.1f} ms")
+print(f"Series, shuffled labels {t_shuf * 1e3:6.1f} ms")
 ```
 
 ```text
-Series(
-    data=None
-    index=None
-    dtype: 'Dtype | None' = None
-    name=None
-)  # 1 more parameters
-DataFrame(
-    data=None
-    index: 'Axes | None' = None
-    columns: 'Axes | None' = None
-    dtype: 'Dtype | None' = None
-)  # 1 more parameters
-read_csv(
-    filepath_or_buffer: 'FilePath | ReadCsvBuffer[bytes] | ReadCsvBuffer[str]'
-    dtype: 'DtypeArg | None' = None
-    nrows: 'int | None' = None
-)  # 41 more parameters
-first_look(
-    df: 'pd.DataFrame'
-)
-headline(
-    df: 'pd.DataFrame'
-)
+# output varies
+NumPy arrays               1.7 ms
+Series, equal labels       2.8 ms
+Series, shuffled labels  119.1 ms
 ```
 
-The parameters that matter in this chapter:
+When the two indexes are equal, pandas sees it and adds the arrays by position. The cost is then a small step above NumPy. When the labels are in another order, pandas must find each label of one index in the other. That search is more than ten times slower, which is what the assertion checks. The sum is the same in both cases, and the second assertion checks that too. Sort or align two tables once, before a long series of operations on them.
 
-| Parameter | Default | What it does here | What goes wrong |
-|---|---|---|---|
-| `Series(data=...)` | `None` | the values: a list, an array or a dict | a dict puts its keys in the index |
-| `Series(index=...)` | `None` | the labels, which also drive alignment | labels on one side only give `NaN`, and `int64` becomes `float64` (this chapter) |
-| `Series(dtype=...)` | `None` | forces the type of every value | — |
-| `Series(name=...)` | `None` | the name, which becomes the column name | — |
-| `DataFrame(data=..., index=..., columns=...)` | `None` | a dict of columns, or rows and column names | — |
-| `read_csv(filepath_or_buffer)` | required | the file or buffer to read | — |
-| `read_csv(nrows=...)` | `None` | read only the first n rows, to look at a large file | — |
-| `first_look(df)` | required | one row for each column: dtype, nulls, distinct values, first value | — |
-| `headline(df)` | required | one line: rows, columns and deep memory | — |
+## Reference
 
-`first_look` returns a DataFrame indexed by column name. `headline` returns a string.
+| Callable | Introduced in | Contract |
+|---|---|---|
+| `pd.Series` | The Series: values and labels | values plus labels; arithmetic aligns on the labels |
+| `pd.DataFrame` | The DataFrame: Series that share an index | columns that share one row index, each with its own dtype |
+| `pd.read_csv` | Read the call records ([Chapter 2](02-input-and-output.md) has the block) | a CSV file as a DataFrame |
+| `pdbook.looks.first_look` | Build: first_look | one row for each column: dtype, nulls, distinct values, first value |
+| `pdbook.looks.headline` | Build: first_look | one line: rows, columns and deep memory |
 
 ## What you have now
 

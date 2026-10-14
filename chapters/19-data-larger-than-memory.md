@@ -80,7 +80,7 @@ print(f"read all {t_all * 1000:.0f} ms, two columns {t_cols * 1000:.0f} ms, two 
 # output varies
 1000000 (1000000, 9) (1000000, 2) (776300, 2)
 101 21 16 MB in memory
-read all 94 ms, two columns 36 ms, two columns and rows 48 ms
+read all 103 ms, two columns 40 ms, two columns and rows 50 ms
 ```
 
 The table of 1,000,000 rows needs 101 MB with nine columns and 21 MB with two columns. It needs 16 MB with two columns and the answered calls only (776,300 rows). In every run that I made, the read with the filter was not faster than the read of the same two columns. The file is small, and the filter is an extra step. The saving is in memory. With a file that does not fit in memory, memory is the limit that matters.
@@ -121,6 +121,24 @@ print(total.shape, bool((total == check).all().all()))
 
 100,000 rows in 4 chunks, and the combined result is equal to the result of reading the whole file. Each chunk gives one row for each caller, and the rows with the same caller are added.
 
+The functions of this chapter are in [`pdbook/chunked.py`](../pdbook/chunked.py).
+
+#### `pdbook.chunked.make_big_csv`
+
+```text
+pdbook.chunked.make_big_csv(
+    path,
+    times=50,
+)
+```
+
+The function writes the call records `times` over to `path`, with a unique `call_id`, and returns the path as a `pathlib.Path`.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `path` | required | the file to write | an existing file is replaced, with no question |
+| `times` | `50` | the number of copies: 50 gives 1,000,000 rows and 84 MB | `times=100` writes 2,000,000 rows and 170 MB. Check the free disk space first |
+
 The method works for aggregates that you can add across chunks: sum, count, minimum, maximum. A mean is the sum divided by the count, so keep both and divide at the end. It does not work for the median, a quantile, or the number of distinct values. Those need all the values of a group at once, or an approximation with a different structure. The mean of the means of the chunks is also wrong, because chunks hold different counts.
 
 ## Build: chunked and whole
@@ -158,6 +176,36 @@ S0003   40520.0   360  112.6
 
 The two results are equal in every cell. The chunk size of 70,000 rows does not divide the file, so the last chunk is shorter, and the result is still the same. The file has 400,000 rows, and 310,520 of its calls are answered.
 
+#### `pdbook.chunked.talk_by_caller_chunked`
+
+```text
+pdbook.chunked.talk_by_caller_chunked(
+    path,
+    chunksize=100000,
+)
+```
+
+The function returns, for each caller, the `sum`, the `size` and the `mean` of the duration of the answered calls. Only one chunk is in memory at a time.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `path` | required | the CSV file of call records | a path that does not exist raises `FileNotFoundError` |
+| `chunksize` | `100000` | the rows in each chunk. It changes the memory and not the result | — (with 10 rows for each chunk the result is still equal, and the job is much slower) |
+
+#### `pdbook.chunked.talk_by_caller_whole`
+
+```text
+pdbook.chunked.talk_by_caller_whole(
+    path,
+)
+```
+
+The function returns the same table as `talk_by_caller_chunked`, from one read of the whole file.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `path` | required | the CSV file of call records | it needs the memory of the whole file: see the next block |
+
 Now the memory. Each measure starts a new Python process, because the peak of one process includes everything that it did before. The figure is `VmHWM`, the high-water mark of the resident memory of the new process, from `/proc/self/status`, so the function works on Linux only. The block writes a file of 2,000,000 rows and 170 MB, and it takes about 30 seconds:
 
 ```python
@@ -189,13 +237,27 @@ assert chunked < whole < everything
 
 ```text
 # output varies
-python and pandas 99 MB | all 9 columns 583 MB | 3 columns 335 MB | 3 columns in chunks 178 MB
-chunked job: 1.9 s for 1,552,600 answered calls
+python and pandas 100 MB | all 9 columns 583 MB | 3 columns 335 MB | 3 columns in chunks 178 MB
+chunked job: 2.1 s for 1,552,600 answered calls
 ```
 
 On the machine that wrote this book, a file of 170 MB gave these peaks. Python and pandas alone need about 100 MB. Reading all nine columns needs about 580 MB, and reading three columns needs about 340 MB. Chunks of 100,000 rows need about 180 MB.
 
 The peaks stayed within about 10 MB between the runs that I made. Reading three columns instead of nine saves about 240 MB, and chunks save about 160 MB more. The assertion in the block fails if the order of the three is different on your machine.
+
+#### `pdbook.chunked.peak_rss_mb`
+
+```text
+pdbook.chunked.peak_rss_mb(
+    code,
+)
+```
+
+The function runs `code` in a new Python process and returns its peak resident memory in MB, the `VmHWM` line of `/proc/self/status`. It works on Linux only.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `code` | required | Python source as a string | `ru_maxrss` of a child includes the memory of the parent at the fork, so the function reads `VmHWM`. Code that fails raises `CalledProcessError`. A plain `x = 1` gives about 11 MB: the interpreter alone |
 
 The chunked version does not grow with the file. Its peak is the baseline plus one chunk. That is the property that you buy. You pay for it in more code, in aggregates that you can add, and in a read that is not faster. The block prints the time of the chunked job for 2,000,000 rows.
 
@@ -235,66 +297,50 @@ float64
 
 The first chunk has the rows 1 and 2, all whole numbers, so `minutes` is `int64`. The second chunk has a missing value, so it is `float64`. The two chunks have different dtypes for one column, and `concat` makes `float64`. A sum over the chunks mixes the two types. With `dtype` in the call, every chunk has the type that you chose.
 
+This is not the `low_memory` chunking of [Chapter 2](02-input-and-output.md). There, the chunks are inside one read, and pandas joins their types into one type for the column. Here, each chunk is a table of its own, and nothing joins them.
+
 - **Invariant.** A chunk holds a fixed number of rows and is parsed alone. At any time one chunk and your aggregate are in memory.
 - **Failure.** The dtype of a column can change from chunk to chunk. Give `dtype` for every column that you use.
 - **Cost.** The parse of every row, as in a whole read. The memory is the chunk, and the time is not smaller.
 
-## Reference
+A reader is an iterator, and an iterator is used up. The next block reads the same text twice from one reader, and then uses `iterator=True`, which gives the chunks on request with `get_chunk`:
 
 ```python
+import io
+
 import pandas as pd
 
-from pdbook.chunked import make_big_csv, peak_rss_mb, talk_by_caller_chunked, talk_by_caller_whole
-from pdbook.sigs import show_signature
+text = "id,minutes\n1,5\n2,6\n3,\n4,8\n"
+reader = pd.read_csv(io.StringIO(text), chunksize=2)
+print("first pass :", sum(len(chunk) for chunk in reader), "rows")
+print("second pass:", sum(len(chunk) for chunk in reader), "rows")
 
-show_signature(pd.read_csv, ["filepath_or_buffer", "usecols", "dtype", "chunksize"])
-show_signature(pd.read_parquet, ["columns", "filters"])
-show_signature(make_big_csv)
-show_signature(talk_by_caller_chunked)
-show_signature(talk_by_caller_whole)
-show_signature(peak_rss_mb)
+on_request = pd.read_csv(io.StringIO(text), iterator=True)
+print(len(on_request.get_chunk(3)), len(on_request.get_chunk(3)))
+
+with pd.read_csv(io.StringIO(text), chunksize=2) as reader:
+    print(type(reader).__name__, len(next(iter(reader))))
 ```
 
 ```text
-read_csv(
-    filepath_or_buffer: 'FilePath | ReadCsvBuffer[bytes] | ReadCsvBuffer[str]'
-    usecols: 'UsecolsArgType' = None
-    dtype: 'DtypeArg | None' = None
-    chunksize: 'int | None' = None
-)  # 40 more parameters
-read_parquet(
-    columns: 'list[str] | None' = None
-    filters: 'list[tuple] | list[list[tuple]] | None' = None
-)  # 7 more parameters
-make_big_csv(
-    path: 'str | pathlib.Path'
-    times: 'int' = 50
-)
-talk_by_caller_chunked(
-    path: 'str | pathlib.Path'
-    chunksize: 'int' = 100000
-)
-talk_by_caller_whole(
-    path: 'str | pathlib.Path'
-)
-peak_rss_mb(
-    code: 'str'
-)
+first pass : 4 rows
+second pass: 0 rows
+3 1
+TextFileReader 2
 ```
 
-| Parameter | Default | What it does here | What goes wrong |
-|---|---|---|---|
-| `read_csv(chunksize=...)` | `None` | rows for each chunk; the result is an iterator | the dtype of a column is chosen again for each chunk: `int64` then `float64` |
-| `read_csv(usecols=...)` | `None` | read only these columns | — (3 of 9 columns: about 340 MB against about 580 MB at the peak) |
-| `read_csv(dtype=...)` | `None` | the type of the columns that you name, in every chunk | — |
-| `read_parquet(columns=...)` | `None` | read only these columns | — |
-| `read_parquet(filters=...)` | `None` | a filter that is applied at the read | the result has 776,300 of 1,000,000 rows |
-| `make_big_csv(path, times=...)` | required, `50` | the call records repeated `times` over | `times=100` writes 2,000,000 rows and 170 MB |
-| `talk_by_caller_chunked(path, chunksize=...)` | required, `100000` | sum, count and mean for each caller | the first version returned `size` as `float64` when a caller was missing from a chunk |
-| `talk_by_caller_whole(path)` | required | the same result with the whole file in memory | — |
-| `peak_rss_mb(code)` | required | the peak resident memory of a fresh process that runs `code`, in MB (Linux) | `ru_maxrss` includes the memory of the parent at the fork |
+The second pass gives no rows, and no error. A job that computes the sum over the chunks and then the count over the same reader gets a count of 0. Make one pass and compute every aggregate in it, or make a new reader. `get_chunk(3)` gives three rows and then the one row that is left. The `with` form closes the file when the block ends, even after an error.
 
-`talk_by_caller_chunked` and `talk_by_caller_whole` return equal DataFrames with the columns `sum`, `size` and `mean`.
+## Reference
+
+| Callable | Introduced in | Contract |
+|---|---|---|
+| `pd.read_csv` | How much memory is a file ([Chapter 2](02-input-and-output.md) has the block) | with `chunksize`, a reader of tables of `n` rows |
+| `pd.read_parquet` | Filter at the read with parquet ([Chapter 2](02-input-and-output.md) has the block) | only the columns and rows that you ask for |
+| `pdbook.chunked.make_big_csv` | Chunks | the call records repeated in a CSV file |
+| `pdbook.chunked.talk_by_caller_chunked` | Build: chunked and whole | sum, size and mean for each caller, with bounded memory |
+| `pdbook.chunked.talk_by_caller_whole` | Build: chunked and whole | the same result from one read |
+| `pdbook.chunked.peak_rss_mb` | Build: chunked and whole | the peak memory of a fresh process, in MB (Linux) |
 
 ## What you have now
 

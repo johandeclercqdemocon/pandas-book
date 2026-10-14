@@ -34,6 +34,34 @@ print(g["duration_s"].transform("sum").tolist())
 
 `size` and `sum` have one value for each caller: A, B and C. `transform("sum")` has one value for each of the six rows, and each row carries the sum of its own group. The index of the `transform` result is the index of `mini`, so it fits back into the table as a column.
 
+#### `pd.DataFrame.groupby`
+
+```text
+pd.DataFrame.groupby(
+    self,
+    by=None,
+    level=None,
+    *,
+    as_index=True,
+    sort=True,
+    group_keys=True,
+    observed=True,
+    dropna=True,
+)
+```
+
+The method returns a `DataFrameGroupBy` object. Nothing is computed until you call a method on it, such as `size`, `sum`, `agg` or `transform`. The Series method has the same parameters.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `by` | `None` | the key: a column name, a list of names, a Series, an array of the same length, a dict or a function of the index labels | a Series key aligns on the index, not on the position: a key with the labels 1 and 2 puts row 0 in no group. A name that is not a column raises `KeyError` |
+| `level` | `None` | group by a level of a MultiIndex, by number or name ([Chapter 11](11-index-and-multiindex.md)) | — |
+| `as_index` | `True` | `True` makes the keys the index of the result. `False` keeps them as columns | `as_index=False` on a Series groupby raises `TypeError` |
+| `sort` | `True` | sort the result by the keys. `False` keeps the order in which each key first appears | — |
+| `group_keys` | `True` | for `apply` with a result of the same shape as the group: add the keys as an index level | with `True`, the index of the result becomes `(key, label)` pairs and does not fit back on the table |
+| `observed` | `True` | for a `category` key: `True` shows only the categories that occur. pandas 3.0 changed the default from `False` | a category with no rows has no row in the report: 4 groups and not 5 for the five categories of [Chapter 4](04-types-and-memory.md) |
+| `dropna` | `True` | drop the rows whose key is missing | `True` loses 277 calls: totals of 19,723 against 20,000 ([Chapter 5](05-missing-data.md)) |
+
 The three operations answer different questions:
 
 | Operation | Rows in the result | Question |
@@ -74,6 +102,29 @@ noanswer   2013           2013     0.0        0.0
 The second column is `count`, the number of non-null values. The first is `size`, the number of rows. They differ for `failed`: 1,033 rows and no duration.
 
 `mean` and `max` of an empty group are `NaN`. When you want "how many rows", use `size`. When you want "how many have a value", use `count`.
+
+#### `pd.core.groupby.DataFrameGroupBy.agg`
+
+```text
+pd.core.groupby.DataFrameGroupBy.agg(
+    self,
+    func=None,
+    *args,
+    engine=None,
+    engine_kwargs=None,
+    **kwargs,
+)
+```
+
+The method returns one row for each group, with one column for each aggregation. `aggregate` is the same method.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `func` | `None` | a name such as `"mean"`, a function, a list of them, or a dict of column to function. `None` when you use named aggregation | a lambda runs in Python for each group: `agg(lambda s: s.mean())` was 66 times slower than `agg("mean")` over 600 callers |
+| `*args` | — | more positional arguments for a function in `func` | — |
+| `engine` | `None` | `'cython'` or `'numba'` for a function. `None` means `'cython'` | `engine="numba"` raises `ModuleNotFoundError` here |
+| `engine_kwargs` | `None` | options for the `numba` engine | — |
+| `**kwargs` | — | named aggregation: `name=("column", "function")`, one output column for each keyword. With a `func`, more keyword arguments for it | a column that does not exist raises `KeyError`. A keyword that the function does not take raises `TypeError` |
 
 A boolean column is a counter. `sum` counts the `True` values and `mean` gives the share:
 
@@ -153,6 +204,29 @@ print(int((answered["vs_mean"] > 3).sum()), "calls are more than 3 times the mea
 
 The first line is a check. The shares of each subscriber add up to 1, so the minimum and the maximum of the sums are both 1. The same result without `transform` needs an `agg`, then a `merge` back to the table, and a risk of a wrong key. `transform` does it in one line, with the index preserved.
 
+#### `pd.core.groupby.DataFrameGroupBy.transform`
+
+```text
+pd.core.groupby.DataFrameGroupBy.transform(
+    self,
+    func,
+    *args,
+    engine=None,
+    engine_kwargs=None,
+    **kwargs,
+)
+```
+
+The method returns a result with the index of the original table: one value for each row, computed from its group.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `func` | required | a name such as `"sum"`, or a function of one group. One value for each group is spread over the rows of the group | a function that returns fewer rows than the group gets `NaN` for the other rows, with no error |
+| `*args` | — | more positional arguments for `func` | — |
+| `engine` | `None` | `'cython'` or `'numba'` for a function | — |
+| `engine_kwargs` | `None` | options for the `numba` engine | — |
+| `**kwargs` | — | more keyword arguments for `func` | — |
+
 ## filter: keep or drop whole groups
 
 `filter` takes a function that returns one boolean for each group. The rows of the groups that return `True` stay:
@@ -190,10 +264,31 @@ assert t_filter / t_mask > 3
 # output varies
 7058 56
 True
-filter 50.5 ms, mask 2.8 ms, ratio 18x
+filter 56.1 ms, mask 3.9 ms, ratio 15x
 ```
 
 56 subscribers have 60 calls or more, and they make 7,058 of the 20,000 calls. The second form uses `transform("size")` and a mask. It gives the same rows. It is faster, because the lambda of `filter` runs once for each of the 600 groups in Python, and `transform("size")` runs once in compiled code. The block prints the times of one run. The assertion fails if the mask form is not at least 3 times faster on your machine.
+
+#### `pd.core.groupby.DataFrameGroupBy.filter`
+
+```text
+pd.core.groupby.DataFrameGroupBy.filter(
+    self,
+    func,
+    dropna=True,
+    *args,
+    **kwargs,
+)
+```
+
+The method returns the rows of the groups for which `func` returns `True`.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `func` | required | a function of one group that returns one `True` or `False` | a function that returns a number or a Series raises `TypeError`. More than 3 times slower than a mask from `transform("size")` (asserted) |
+| `dropna` | `True` | `False` keeps the rows of the failing groups, with `NaN` in every column | — |
+| `*args` | — | more positional arguments for `func`. They come after `dropna` | `filter(f, 1)` gives the `1` to `dropna`, not to `f`. Pass the argument by name |
+| `**kwargs` | — | more keyword arguments for `func` | — |
 
 ## Keys that are not in the table
 
@@ -223,6 +318,46 @@ print(local_day.index.min(), local_day.index.max())
 ```
 
 The call records are in UTC. In UTC the month has 31 days, because the first calls of 1 September (local time) fall on 31 August in UTC. In local time it has the 30 days of September. The counts of the days that exist in both are different for most of the days, because a local day starts at 22:00 UTC. A daily report must say which zone it uses. [Chapter 12](12-dates-and-resampling.md) treats time zones.
+
+`pd.Grouper` does the same with a frequency instead of `dt.date`. It keeps the timestamp, with its zone, as the key:
+
+```python
+import pandas as pd
+
+from pdbook.io import load_calls
+
+calls = load_calls()
+by_utc = calls.groupby(pd.Grouper(key="start", freq="D")).size()
+local = calls.assign(start=calls["start"].dt.tz_convert("Europe/Brussels"))
+by_local = local.groupby(pd.Grouper(key="start", freq="D")).size()
+print(len(by_utc), by_utc.index[0])
+print(len(by_local), by_local.index[0])
+print(int(by_utc.sum()), int(by_local.sum()))
+```
+
+```text
+31 2026-08-31 00:00:00+00:00
+30 2026-09-01 00:00:00+02:00
+20000 20000
+```
+
+The keys are the starts of the days, in the zone of the column. The two reports have the same total and different days.
+
+#### `pd.Grouper`
+
+```text
+pd.Grouper(
+    *args,
+    **kwargs,
+)
+```
+
+The class describes a group key for `groupby`. With `freq`, it groups timestamps into periods, and it becomes a `TimeGrouper`.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `*args` | — | positional arguments. The first one is taken as `key` | — |
+| `**kwargs` | — | `key` (the column), `level`, `freq` (such as `"D"` or `"1h"`), `sort` and `dropna`. With `freq`, also `closed`, `label`, `origin`, `offset` and `convention`, as for `resample` ([Chapter 12](12-dates-and-resampling.md)) | `freq` on a column of text raises `TypeError`. With `freq="D"`, `origin` and `offset` do nothing and give a `RuntimeWarning`. `axis` raises `TypeError` in pandas 3.0 |
 
 ## Totals must add up
 
@@ -276,6 +411,22 @@ subscriber_id    plan     city  calls  answered  failed  talk_min  cells  answer
 ```
 
 The distribution of calls is very uneven. The median subscriber makes 22 calls and the maximum is 628. A mean of 33.3 calls for each subscriber describes nobody. Report the median and the percentiles for such a column.
+
+#### `pdbook.summary.subscriber_summary`
+
+```text
+pdbook.summary.subscriber_summary(
+    calls,
+    subs,
+)
+```
+
+The function returns one row for each subscriber in `subs`, with zeros for a subscriber who made no call.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `calls` | required | the call records | a call whose caller is not in `subs` is in no row, with no message. The check `summary["calls"].sum() == len(calls)` finds it |
+| `subs` | required | the subscribers, with `subscriber_id`, `plan` and `city` | — |
 
 Now the four checks. They run in the example module as well:
 
@@ -341,64 +492,60 @@ The codes are small integers (`int64` here, from 0 to 599), and there are 600 ke
 - **Failure.** The missing key of [Chapter 5](05-missing-data.md): the rows with no code are in no group.
 - **Cost.** One pass to factorize the key, and one pass for each reduction. A key that is already a `category` has its codes, so the first pass is free.
 
-## Reference
+The next block tests both claims. A missing key gets the code -1 from `pd.factorize`, so it is in no group. Then it times a grouped sum on two million rows: once with a `str` key, which pandas must factorize, and once with a `category` key, which has its codes:
 
 ```python
+import timeit
+
+import numpy as np
 import pandas as pd
 
-from pdbook.sigs import show_signature
-from pdbook.summary import subscriber_summary
+from pdbook.io import load_calls
 
-show_signature(pd.DataFrame.groupby, ["by", "as_index", "sort", "dropna", "observed"])
-show_signature(pd.core.groupby.DataFrameGroupBy.agg, ["func"])
-show_signature(pd.core.groupby.DataFrameGroupBy.transform, ["func"])
-show_signature(pd.core.groupby.DataFrameGroupBy.filter, ["func", "dropna"])
-show_signature(pd.Grouper)
-show_signature(subscriber_summary)
+calls = load_calls()
+codes, keys = pd.factorize(calls["cell_id"])
+print(int((codes == -1).sum()), "rows with code -1,", int(calls["cell_id"].isna().sum()), "missing keys")
+
+big = pd.concat([calls] * 100, ignore_index=True)
+as_str = big["cell_id"]
+as_cat = as_str.astype("category")
+duration = big["duration_s"]
+
+
+def best(f):
+    return min(timeit.repeat(f, number=1, repeat=5))
+
+
+t_str = best(lambda: duration.groupby(as_str).sum())
+t_cat = best(lambda: duration.groupby(as_cat).sum())
+t_factorize = best(lambda: pd.factorize(as_str))
+same = np.allclose(duration.groupby(as_str).sum().to_numpy(), duration.groupby(as_cat).sum().to_numpy())
+assert same and t_str / t_cat > 1.3
+print(f"str key       {t_str * 1e3:6.0f} ms")
+print(f"category key  {t_cat * 1e3:6.0f} ms")
+print(f"factorize     {t_factorize * 1e3:6.0f} ms")
 ```
 
 ```text
-DataFrame.groupby(
-    by=None
-    as_index: 'bool' = True
-    sort: 'bool' = True
-    observed: 'bool' = True
-    dropna: 'bool' = True
-)  # 3 more parameters
-DataFrameGroupBy.aggregate(
-    func=None
-)  # 5 more parameters
-DataFrameGroupBy.transform(
-    func
-)  # 5 more parameters
-DataFrameGroupBy.filter(
-    func
-    dropna: 'bool' = True
-)  # 3 more parameters
-Grouper(
-    *args
-    **kwargs
-)
-subscriber_summary(
-    calls: 'pd.DataFrame'
-    subs: 'pd.DataFrame'
-)
+# output varies
+277 rows with code -1, 277 missing keys
+str key           88 ms
+category key      37 ms
+factorize         58 ms
 ```
 
-| Parameter | Default | What it does here | What goes wrong |
-|---|---|---|---|
-| `groupby(by)` | `None` | the column, list of columns or Series that defines the groups | a key that is a Series must have the index of the table |
-| `groupby(as_index=...)` | `True` | `False` keeps the keys as columns | — |
-| `groupby(sort=...)` | `True` | sort the groups by key | — |
-| `groupby(observed=...)` | `True` | category keys: only the groups that occur | — |
-| `groupby(dropna=...)` | `True` | `False` keeps the missing key as a group | 277 calls missing from the report when `True` |
-| `agg(func)` | `None` | a name or function, or `name=("column", "function")` | a lambda is slower than a built-in name |
-| `transform(func)` | required | a result with one value for each original row | — |
-| `filter(func, dropna=...)` | required, `True` | keep the groups for which `func` is `True` | more than 3 times slower than a mask from `transform("size")` (asserted) |
-| `Grouper(key=..., freq=...)` | — | a time key, for example `key="start", freq="D"` | the zone of the column decides the day |
-| `subscriber_summary(calls, subs)` | required | one row for each subscriber, zeros for no calls | — |
+The 277 missing cells have the code -1, which is no group. The two sums are equal, and the `category` key is faster, which is what the assertion checks. The difference is about the time of `factorize` alone: a `str` key pays for its codes on each `groupby`. A key that you group by many times is a good candidate for `category`.
 
-`agg` returns one row for each group. `transform` returns the index of the table. `subscriber_summary` returns a DataFrame with 600 rows.
+## Reference
+
+| Callable | Introduced in | Contract |
+|---|---|---|
+| `pd.DataFrame.groupby` | Split, apply, combine | a lazy grouping by keys; a missing key and an empty category are dropped by default |
+| `pd.core.groupby.DataFrameGroupBy.agg` | agg and named aggregation | one row for each group |
+| `pd.core.groupby.DataFrameGroupBy.transform` | transform: values that fit back into the table | one value for each original row, from its group |
+| `pd.core.groupby.DataFrameGroupBy.filter` | filter: keep or drop whole groups | the rows of the groups that pass a test |
+| `pd.Grouper` | Keys that are not in the table | a time key with a frequency, in the zone of the column |
+| `pdbook.summary.subscriber_summary` | Build: subscriber_summary | one row for each subscriber, zeros for no calls |
 
 ## What you have now
 

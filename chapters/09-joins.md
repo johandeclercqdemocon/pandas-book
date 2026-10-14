@@ -36,6 +36,43 @@ outer  ['a', 'b', 'c', 'd'] [1.0, 2.0, 3.0, nan] [nan, 20.0, 30.0, 40.0]
 
 For enrichment, use `left`: the table that you enrich keeps all its rows, and a missing match shows as `NaN`. An `inner` join drops the rows without a match, and you lose them in silence.
 
+#### `pd.DataFrame.merge`
+
+```text
+pd.DataFrame.merge(
+    self,
+    right,
+    how='inner',
+    on=None,
+    left_on=None,
+    right_on=None,
+    left_index=False,
+    right_index=False,
+    sort=False,
+    suffixes=('_x', '_y'),
+    copy=<no_default>,
+    indicator=False,
+    validate=None,
+)
+```
+
+The method joins two tables on key columns or on the index, and returns a new table. `pd.merge(left, right, ...)` is the same function.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `right` | required | the other table, or a named Series | — |
+| `how` | `'inner'` | `'left'`, `'right'`, `'outer'`, `'inner'` or `'cross'`. `'cross'` gives every pair of rows | the default `'inner'` loses rows without a match in silence: the join with the cell table keeps 19,723 of 20,000 calls |
+| `on` | `None` | the key columns, which have the same name in both tables. With `None`, every column that has the same name in both | with `None`, a second column with the same name becomes part of the key: a shared column `x` gave 0 rows, with no error. Name the key |
+| `left_on` | `None` | the key columns of the left table, when the names differ | `left_on` without `right_on` or `right_index` raises `MergeError` |
+| `right_on` | `None` | the key columns of the right table | a text key and an integer key raise `ValueError`. Two text keys in different forms match nothing |
+| `left_index` | `False` | use the index of the left table as the key | — |
+| `right_index` | `False` | use the index of the right table as the key, for example a lookup table indexed by its key | — |
+| `sort` | `False` | sort the result by the keys | — |
+| `suffixes` | `('_x', '_y')` | the endings for columns that exist on both sides and are not keys | `(None, None)` with such a column raises `ValueError` |
+| `copy` | `<no_default>` | ignored since pandas 3.0 | any value warns with `Pandas4Warning` |
+| `indicator` | `False` | `True` adds the column `_merge` with `both`, `left_only` or `right_only`. A string names the column | — (277 `left_only`, all with a missing key) |
+| `validate` | `None` | `"1:1"`, `"1:m"`, `"m:1"` or `"m:m"`: check that the key is unique on each side marked `1` | without it, 10 duplicate subscribers add 284 rows and no error |
+
 ## The number of rows
 
 A join of one row on the left with `n` rows on the right gives `n` rows. The result has as many rows as there are pairs of matching rows. Three relationships matter:
@@ -202,6 +239,39 @@ print(both.index.tolist())
 
 A column that one table lacks becomes `NaN`. Use `ignore_index=True` to get a new `RangeIndex`. Without it, the index repeats labels (0, 1, 0), and a later `.loc[0]` returns two rows. Build a list of tables and call `concat` once. A `concat` inside a loop copies the growing table at each step ([Chapter 18](18-performance.md)).
 
+#### `pd.concat`
+
+```text
+pd.concat(
+    objs,
+    *,
+    axis=0,
+    join='outer',
+    ignore_index=False,
+    keys=None,
+    levels=None,
+    names=None,
+    verify_integrity=False,
+    sort=<no_default>,
+    copy=<no_default>,
+)
+```
+
+The function puts a list of tables or Series together along one axis.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `objs` | required | a list of tables or Series, or a dict of name to table. A `None` in the list is skipped | an empty list raises `ValueError`. A column of integers in one table and of text in the other becomes `object` |
+| `axis` | `0` | `0` stacks the rows, `1` puts the tables next to each other | with `axis=1` the rows align on the index: two tables with the labels 0, 1 and 1 give a `NaN` in row 0 |
+| `join` | `'outer'` | `'outer'` keeps every column, `'inner'` keeps only the columns in all the tables | — |
+| `ignore_index` | `False` | `True` makes a new `RangeIndex` | `False` repeats labels: `loc[0]` returns two rows |
+| `keys` | `None` | one name for each table. It becomes a new outer level of the index | — |
+| `levels` | `None` | the allowed values of the `keys` level, in order | — |
+| `names` | `None` | the names of the levels of the new index | — |
+| `verify_integrity` | `False` | `True` raises `ValueError` when a label repeats | it costs a check of the whole index |
+| `sort` | `<no_default>` | sort the columns that are not in all the tables. Not set means no sort | — |
+| `copy` | `<no_default>` | ignored since pandas 3.0 | any value warns with `Pandas4Warning` |
+
 ## Build: enrich
 
 `enrich` chains four many-to-one lookups. Each one is a `left` join with `validate="m:1"` and `indicator=True`. After each join it checks that the row count did not change, and it counts the keys that were present and not found:
@@ -228,6 +298,26 @@ print(enriched.groupby("tech", dropna=False).size().to_dict())
 ```
 
 The table keeps its 20,000 rows and gets seven new columns. No key is unmatched. 5,982 calls (29.9%) go to a number that belongs to one of the 600 subscribers. The last line has three groups. The 277 calls without a cell have no technology, and that group exists only because of `dropna=False` ([Chapter 5](05-missing-data.md)).
+
+#### `pdbook.enrich.enrich`
+
+```text
+pdbook.enrich.enrich(
+    calls,
+    subs,
+    cells,
+    plans,
+)
+```
+
+The function returns `(table, report)`: the calls with seven new columns, and a dict with the count of unmatched keys for each lookup.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `calls` | required | the call records | — |
+| `subs` | required | the subscribers | a duplicate `subscriber_id` raises `MergeError` |
+| `cells` | required | the cells, with `cell_id`, `city` and `tech` | a duplicate `cell_id` raises `MergeError` |
+| `plans` | required | the plans, with `plan` and `rate_per_min_eur` | a duplicate plan raises `MergeError` |
 
 The function must also refuse bad input. Plant a fault and see:
 
@@ -293,66 +383,59 @@ True 20000
 
 The positions are integers into the 600 subscriber rows, and none is `-1`, because every caller is known. Taking the plans at those positions gives the same column as `merge`. The last line is the many-to-many rule: for each key, the result has the left count times the right count, so the total is the sum of the products. The 1,000 calls have 5,356 pairs, which is the number that [the section on row counts](#the-number-of-rows) printed.
 
+#### `pd.Index.get_indexer`
+
+```text
+pd.Index.get_indexer(
+    self,
+    target,
+    method=None,
+    limit=None,
+    tolerance=None,
+)
+```
+
+The method returns, for each label of `target`, its position in the index, or -1 when the label is not there.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `target` | required | the labels to look up | an index with a repeated label raises `InvalidIndexError`: a position must be one number |
+| `method` | `None` | for a label that is not there: `'pad'` or `'ffill'` takes the previous label, `'backfill'` or `'bfill'` the next, `'nearest'` the closest | with a `method`, the index must be sorted, or it raises `ValueError` |
+| `limit` | `None` | the largest number of target labels in a row that an inexact match can fill | — |
+| `tolerance` | `None` | the largest distance for an inexact match. A label farther away gets -1 | on the index 10, 20, 30 with `nearest` and `tolerance=3`, 24 gets -1 and 29 gets the position of 30 |
+
 - **Invariant.** A left join on a unique right key keeps the number of left rows and the order of the left table.
 - **Failure.** A repeated right key makes one position into several, and the row count goes up by the sum of the repeats.
 - **Cost.** One hash table of the right keys and one lookup for each left row. A smaller right table is cheaper to build.
 
-## Reference
+The lookup also fixes the order of the rows. A left join and an inner join walk the left table, so the result has the order of the left keys. A right join walks the right table. An outer join must merge two key sets, and it sorts them. The next block shows the four orders on two small tables with repeated and missing keys:
 
 ```python
 import pandas as pd
 
-from pdbook.enrich import enrich
-from pdbook.sigs import show_signature
-
-show_signature(pd.DataFrame.merge, ["right", "how", "on", "left_on", "right_on", "suffixes", "indicator", "validate"])
-show_signature(pd.concat, ["objs", "axis", "ignore_index"])
-show_signature(pd.Index.get_indexer, ["target"])
-show_signature(enrich)
+left = pd.DataFrame({"k": ["c", "a", "b", "c"], "x": [1, 2, 3, 4]})
+right = pd.DataFrame({"k": ["b", "d", "c", "a"], "y": [20, 40, 30, 10]})
+for how in ["left", "inner", "right", "outer"]:
+    print(f"{how:6s}", left.merge(right, on="k", how=how)["k"].tolist())
 ```
 
 ```text
-DataFrame.merge(
-    right: 'DataFrame | Series'
-    how: 'MergeHow' = 'inner'
-    on: 'IndexLabel | AnyArrayLike | None' = None
-    left_on: 'IndexLabel | AnyArrayLike | None' = None
-    right_on: 'IndexLabel | AnyArrayLike | None' = None
-    suffixes: 'Suffixes' = ('_x', '_y')
-    indicator: 'str | bool' = False
-    validate: 'MergeValidate | None' = None
-)  # 5 more parameters
-concat(
-    objs: 'Iterable[Series | DataFrame] | Mapping[HashableT, Series | DataFrame]'
-    axis: 'Axis' = 0
-    ignore_index: 'bool' = False
-)  # 7 more parameters
-Index.get_indexer(
-    target
-)  # 4 more parameters
-enrich(
-    calls: 'pd.DataFrame'
-    subs: 'pd.DataFrame'
-    cells: 'pd.DataFrame'
-    plans: 'pd.DataFrame'
-)
+left   ['c', 'a', 'b', 'c']
+inner  ['c', 'a', 'b', 'c']
+right  ['b', 'd', 'c', 'c', 'a']
+outer  ['a', 'b', 'c', 'c', 'd']
 ```
 
-| Parameter | Default | What it does here | What goes wrong |
-|---|---|---|---|
-| `merge(right)` | required | the table to join | — |
-| `merge(how=...)` | `'inner'` | `left` keeps all left rows | `inner` loses 144 calls when 5 subscribers are not in the lookup: 19,856 against 20,000 |
-| `merge(on=...)`, `left_on`, `right_on` | `None` | the key columns | a text key and an integer key raise `ValueError`; two keys in different forms match nothing |
-| `merge(suffixes=...)` | `('_x', '_y')` | names for columns that exist on both sides | — |
-| `merge(indicator=...)` | `False` | `True` adds `_merge`: `both`, `left_only`, `right_only` | — (277 `left_only`, all with a missing key) |
-| `merge(validate=...)` | `None` | `"m:1"` checks that the right key is unique | without it, 10 duplicate subscribers add 284 rows and no error |
-| `concat(objs)` | required | a list of tables to stack | — |
-| `concat(axis=...)` | `0` | `0` stacks rows, `1` puts tables side by side | — |
-| `concat(ignore_index=...)` | `False` | `True` makes a new `RangeIndex` | `False` repeats labels: `loc[0]` returns two rows |
-| `get_indexer(target)` | required | the position of each label, `-1` when not found | — |
-| `enrich(calls, subs, cells, plans)` | required | `(table, report)`: the calls with plan, cities, technology, rate and on-net flag | a duplicate key in a lookup raises `MergeError` |
+`left` and `inner` keep `c, a, b, c`: the order of the left table, with the repeated `c` in both places. `right` follows the right table, and the two left rows for `c` appear together where `c` is in the right table. `outer` gives the keys in sorted order. A report that depends on the order of the rows after a join must sort them itself.
 
-`merge` returns a DataFrame. With `validate`, it raises `MergeError` when the check fails.
+## Reference
+
+| Callable | Introduced in | Contract |
+|---|---|---|
+| `pd.DataFrame.merge` | Four joins on two small tables | rows joined on keys; `validate` checks the relationship |
+| `pd.concat` | concat: stacking tables | tables stacked, aligned on column names or on the index |
+| `pdbook.enrich.enrich` | Build: enrich | the calls with seven lookups, and a report of unmatched keys |
+| `pd.Index.get_indexer` | How it works | the position of each label, -1 when not found |
 
 ## What you have now
 

@@ -4,7 +4,7 @@
 
 This book teaches pandas with one small data set, the call records of a mobile operator. It follows one rule: **nothing is asserted that was not run**. Each chapter builds something that you keep. Examples are a loader, a validator, a report and a leak test.
 
-Each chapter shows the mechanism under the code, and it prints the signature of every function that it uses. It ends with exercises and worked solutions. The checker of the book executes every code block. It compares every printed output with what the code prints now.
+Each chapter shows the mechanism under the code. At the first use of each function, it prints the full signature and explains every parameter in a table. It ends with exercises and worked solutions. The checker of the book executes every code block. It compares every printed output with what the code prints now.
 
 It targets **pandas 3.0**. Most tutorials on the web describe pandas 1.x or 2.x, and 3.0 changed behavior that matters: text is stored as `str`, copy-on-write is always on, timestamps have microsecond resolution. Chapter 24 lists each change that the book ran.
 
@@ -51,7 +51,8 @@ Each chapter has the same shape:
 - A header with *Build*, *Theory kept*, *Source* and *Run this first*.
 - The working material.
 - **How it works**: the mechanism, with one executed block and three lines (invariant, failure, cost).
-- **Reference**: signatures printed from the installed library, then a table of parameters with defaults and a measured consequence.
+- A `####` block at the first use of each function: the full signature of the installed library, then one row for each parameter, with its default and a measured consequence or `—`. A later chapter links back to the block. It does not repeat it.
+- **Reference**: an index of the functions of the chapter, with the section that introduces each one.
 - A summary with a link to the next chapter.
 
 Exercises are in [`exercises/`](exercises/) (`NN.md`) and worked solutions in [`exercises/solutions/`](exercises/solutions/). Each chapter has three kinds:
@@ -62,7 +63,7 @@ Exercises are in [`exercises/`](exercises/) (`NN.md`) and worked solutions in [`
 
 The code in the solutions runs under the same checker.
 
-Appendices: [A — described, not built](appendices/A-described-not-built.md) (what the book says and did not run) · [B — what Python already gives you](appendices/B-python-tools.md).
+Appendices: [A — described, not built](appendices/A-described-not-built.md) (what the book says and did not run) · [B — what Python already gives you](appendices/B-python-tools.md) · [C — what went wrong](appendices/C-what-went-wrong.md) (the statements of the book that a run showed to be wrong, and the statements of the documentation that pandas 3.0.6 does not follow).
 
 ## How to run and check it
 
@@ -71,17 +72,20 @@ uv sync                                          # installs pandas 3.0, numpy, p
 uv run python scripts/check_snippets.py          # every block runs, every output matches, every link resolves
 uv run python scripts/verify_claims.py           # key numbers recomputed without pandas, and the data pinned by SHA-256
 python3 scripts/audit_numbers.py                 # lists numbers in the prose that no output contains
+uv run python scripts/audit_examples.py          # lists samples that break the four sample rules
 ```
 
 `check_snippets.py` also fails on any warning that a block writes to stderr, because a reader copies the block. Blocks that print a time have `# output varies` above the output and an assertion that checks an order of magnitude. The checker runs the blocks that measure time one at a time, after the others. Run it on an idle machine all the same: a timing assertion can fail under load, and that is not an error in the book. `scripts/refresh_varies.py` rewrites the printed timings from a fresh run.
 
 ## What the checks cover, and what they do not
 
-At the last full run, the checker executed 276 Python blocks and compared 259 printed outputs. `verify_claims.py` agreed on 24 claims that it computed without pandas. The number audit lists the numbers of the prose that no output contains. Each of them is a derived value (a percentage, a difference, a unit conversion), a value that quotes a block of another chapter, or an example that was not measured. The audit is a list for a person to read. It is not a pass or a fail.
+At the last full run, the checker executed 280 Python blocks and compared 258 printed outputs. It checked the signature, the defaults and one row for each parameter of 143 callables.
+
+`verify_claims.py` agreed on 24 claims that it computed without pandas. The number audit lists the numbers of the prose that no output contains. Each of them is a derived value (a percentage, a difference, a unit conversion), a value that quotes a block of another chapter, or an example that was not measured. The audit is a list for a person to read. It is not a pass or a fail.
 
 What is **not** checked: statements about other versions of pandas, about packages that are not installed, and about real networks. [Appendix A](appendices/A-described-not-built.md) lists them. The timings are from one machine. Chapter 19 measures peak memory with `/proc` and works on Linux only. The data are synthetic, so the book says nothing about how often a fault occurs in real call records.
 
-The book also shows its own corrections. [Chapter 24](chapters/24-field-guide.md) lists the first-draft claims that the machine contradicted, with the cause of each. Three tools exist because of them: [`scripts/audit_numbers.py`](scripts/audit_numbers.py), [`scripts/refresh_varies.py`](scripts/refresh_varies.py) and the signature printer [`pdbook/sigs.py`](pdbook/sigs.py).
+The book also shows its own corrections. [Chapter 24](chapters/24-field-guide.md) lists the first-draft claims that the machine contradicted, with the cause of each. [Appendix C](appendices/C-what-went-wrong.md) lists the statements that later audits found wrong. Four tools exist because of them: [`scripts/audit_numbers.py`](scripts/audit_numbers.py), [`scripts/refresh_varies.py`](scripts/refresh_varies.py), [`scripts/audit_examples.py`](scripts/audit_examples.py) and the signature printer [`pdbook/sigs.py`](pdbook/sigs.py).
 
 ## The data
 

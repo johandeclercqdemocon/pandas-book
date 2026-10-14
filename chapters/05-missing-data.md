@@ -76,6 +76,16 @@ False
 
 The comparison with `NaN` is `False` for every row, including the row that holds `NaN`. `isna()` is the reliable test.
 
+#### `pd.DataFrame.isna`
+
+```text
+pd.DataFrame.isna(
+    self,
+)
+```
+
+The method returns a table of the same shape, with `True` where a value is missing. It takes no parameters. The Series method is the same, and `notna` is its opposite. The sum of the result is the count of missing values in each column.
+
 ## Count them, then ask why
 
 The two functions in `pdbook/nulls.py` answer two questions. `null_report` counts. `determinants` tests whether another column decides the null. Run them on the call records:
@@ -96,6 +106,38 @@ cell_id       277  0.0138
 codec        4474  0.2237
 {'duration_s': ['status'], 'cell_id': [], 'codec': ['status']}
 ```
+
+#### `pdbook.nulls.null_report`
+
+```text
+pdbook.nulls.null_report(
+    df,
+)
+```
+
+The function returns one row for each column that has a missing value: the count and the share.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `df` | required | any DataFrame | a table with no missing value gives an empty table, not an error |
+
+#### `pdbook.nulls.determinants`
+
+```text
+pdbook.nulls.determinants(
+    df,
+    max_levels=12,
+)
+```
+
+The function returns, for each column with nulls, the columns of few distinct values that decide whether it is null.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `df` | required | any DataFrame | it finds exact relations only, not weaker ones |
+| `max_levels` | `12` | the largest number of distinct values for a column to be a candidate | with `max_levels=3`, `status` (4 values) is not tested, and every list is empty |
+
+The method `groupby`, in the next block, has its signature and parameters in [Chapter 8](08-group-by.md), the chapter about groups.
 
 The result for `duration_s` and `codec` is `['status']`. The result for `cell_id` is an empty list. Look at the idea behind the function. A column `by` decides a column `col` when, in each group of `by`, the nulls of `col` are all or none. You can see it by hand:
 
@@ -157,6 +199,28 @@ nan
 103.12
 ```
 
+#### `pd.Series.mean`
+
+```text
+pd.Series.mean(
+    self,
+    *,
+    axis=0,
+    skipna=True,
+    numeric_only=False,
+    **kwargs,
+)
+```
+
+The method returns the mean of the values. The DataFrame method returns one mean for each column.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `axis` | `0` | not used for a Series. For a DataFrame, `0` gives a mean for each column and `1` for each row | — |
+| `skipna` | `True` | skip the missing values. `False` gives `NaN` when any value is missing | the mean of `duration_s` is `NaN` with `skipna=False` |
+| `numeric_only` | `False` | for a DataFrame, use only the number and boolean columns | `calls.mean()` raises `TypeError` on the text columns. `numeric_only=True` gives the means of `call_id`, `duration_s` and `roaming` |
+| `**kwargs` | — | accepted for compatibility with NumPy. pandas does not use them | a name that pandas does not know raises `TypeError` |
+
 Three different means from one column. The skipping mean is 108.73. It divides by 18,967, the count of non-null values. The mean with `skipna=False` is `NaN`, because one unknown makes the whole mean unknown. The mean after `fillna(0)` is 103.12.
 
 It divides by 20,000, and it treats the 1,033 failed calls as calls of length zero. None of the three is wrong. They answer different questions: "the mean duration of calls that have a duration", "the mean is unknown", and "the mean duration if a failed call counts as zero". Write the question in a comment next to the line.
@@ -185,6 +249,56 @@ print(len(calls.dropna(thresh=9)))
 `dropna()` with no arguments drops every row that has at least one null. Here it removes 4,686 rows, 23% of the table. Of these, 4,474 have a null `codec`, which means that the call was not answered. The other 212 are answered calls with a lost `cell_id`. The table that remains holds only answered calls.
 
 The third call (`how="all"`) drops nothing, because no row is null in every column. The fourth call (`thresh=9`) keeps rows with at least 9 non-null values. The table has 9 columns, so it is the same as the first call. A report on "all calls" computed from it is a report on answered calls. Use `subset=` to name the columns whose nulls matter for your question.
+
+#### `pd.DataFrame.dropna`
+
+```text
+pd.DataFrame.dropna(
+    self,
+    *,
+    axis=0,
+    how=<no_default>,
+    thresh=<no_default>,
+    subset=None,
+    inplace=False,
+    ignore_index=False,
+)
+```
+
+The method returns the table without the rows, or the columns, that have missing values.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `axis` | `0` | `0` drops rows, `1` drops columns | `axis=1` drops `duration_s`, `cell_id` and `codec`: 3 of 9 columns |
+| `how` | `<no_default>` | `'any'` drops a row with one null, `'all'` drops a row with only nulls. Not set means `'any'` | `dropna()` removes 4,686 of 20,000 rows |
+| `thresh` | `<no_default>` | keep the rows with at least this many values | `thresh=9` on 9 columns is the same as `how="any"`. `how` and `thresh` together raise `TypeError` |
+| `subset` | `None` | look only at these columns | `subset=["cell_id"]` removes 277 rows. A name that is not a column raises `KeyError` |
+| `inplace` | `False` | with `True`, change the table and return `None` | — |
+| `ignore_index` | `False` | with `True`, the result gets the labels 0, 1, 2 and so on | with `False`, the labels have holes: 0, 2, 3 |
+
+#### `pd.Series.fillna`
+
+```text
+pd.Series.fillna(
+    self,
+    value,
+    *,
+    axis=None,
+    inplace=False,
+    limit=None,
+)
+```
+
+The method returns the Series with each missing value replaced by `value`.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `value` | required | the value to put in place of a missing value, or a dict of label to value | `fillna(0)` on `duration_s` moves the mean from 108.73 to 103.12. A string on a `float64` column makes it `object`, with no error. A list raises `TypeError` |
+| `axis` | `None` | not used for a Series | — |
+| `inplace` | `False` | with `True`, change the Series and return `None` | — |
+| `limit` | `None` | the largest number of values to fill, counted along the whole Series | `limit=2` fills the first two missing values of the Series, not two in each gap. For a limit in each gap, use `ffill` or `interpolate` |
+
+In pandas 3.0, `fillna` has no `method` argument. `fillna(method="ffill")` raises `TypeError`, and the method `ffill` below does that work.
 
 ## Group keys that are missing
 
@@ -257,6 +371,56 @@ interpolate(limit=3): 21
 interpolate()      : 0
 ```
 
+#### `pd.Series.interpolate`
+
+```text
+pd.Series.interpolate(
+    self,
+    method='linear',
+    *,
+    axis=0,
+    limit=None,
+    inplace=False,
+    limit_direction=None,
+    limit_area=None,
+    **kwargs,
+)
+```
+
+The method fills the missing values with values on a line between the known values around them.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `method` | `'linear'` | how to compute the new values. `'linear'` treats the rows as equally spaced. `'index'` and `'time'` use the index | `'linear'` ignores the index: on the labels 0, 1, 2, 10 with values 1, gap, gap, 4 it gives 2 and 3. `method="index"` gives 1.3 and 1.6 |
+| `axis` | `0` | not used for a Series | — |
+| `limit` | `None` | the largest number of missing values in a row to fill | no `limit`: all 42 missing steps filled, the 2-hour outage included. `limit=3` leaves 21 |
+| `inplace` | `False` | with `True`, change the Series and return `None` | — |
+| `limit_direction` | `None` | `'forward'`, `'backward'` or `'both'`: the side from which to count `limit`. `None` means `'forward'` for `'linear'` | the default also fills after the last known value, by copying it: `[nan, 1, nan, nan, nan, 5, nan]` ends with 5.0. The first `nan` stays |
+| `limit_area` | `None` | `'inside'` fills only the gaps between two known values. `'outside'` fills only the ends | `'inside'` leaves both ends as `nan` |
+| `**kwargs` | — | more arguments for SciPy methods, such as `order` for `'polynomial'` | `method="polynomial"` needs SciPy, which this book does not install: `ImportError` |
+
+#### `pd.Series.ffill`
+
+```text
+pd.Series.ffill(
+    self,
+    *,
+    axis=None,
+    inplace=False,
+    limit=None,
+    limit_area=None,
+)
+```
+
+The method fills each missing value with the last known value before it.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `axis` | `None` | not used for a Series | — |
+| `inplace` | `False` | with `True`, change the Series and return `None` | — |
+| `limit` | `None` | the largest number of missing values in a row to fill | `limit=3` leaves 21 of 42 |
+| `limit_area` | `None` | `'inside'` fills only between two known values. `'outside'` fills only after the last one | with the default, the gap after the last known value is filled too. A value that is no longer reported continues forever |
+
 `ffill` repeats the last value: "the load did not change". `interpolate` draws a line between the two ends: "the load changed steadily".
 
 Both are claims about a period in which you have no data. Use `limit` to fill short gaps (one lost sample) and to leave long gaps (an outage) visible. The last line fills all 42 steps, including the two-hour outage with a straight line. The result looks like a measurement, and it is not one.
@@ -317,80 +481,68 @@ The first line shows the test that `isna` uses for floats: a value that is not e
 - **Failure.** A comparison with `==` does not find the missing values. The float is not equal to itself, and the mask gives `<NA>`.
 - **Cost.** The nullable type needs one byte more for each value, and each result must combine with the mask.
 
-## Reference
+The logic of the nullable `boolean` type is a rule with three values, the logic of Kleene. Put false, unknown and true on a line as 0, 0.5 and 1. Then "or" is the larger of two values, and "and" is the smaller. The next block applies the rule to all nine pairs and compares it with pandas:
 
 ```python
+import itertools
+
 import pandas as pd
 
-from pdbook.nulls import determinants, null_report
-from pdbook.sigs import show_signature
+values = [True, False, None]
+rank = {False: 0.0, None: 0.5, True: 1.0}
+back = {0.0: False, 0.5: None, 1.0: True}
 
-show_signature(pd.DataFrame.isna)
-show_signature(pd.Series.fillna, ["value", "limit"])
-show_signature(pd.DataFrame.dropna, ["axis", "how", "thresh", "subset"])
-show_signature(pd.DataFrame.groupby, ["by", "dropna", "observed"])
-show_signature(pd.Series.mean, ["skipna"])
-show_signature(pd.Series.interpolate, ["method", "limit"])
-show_signature(pd.Series.ffill, ["limit"])
-show_signature(null_report)
-show_signature(determinants)
+left, right = zip(*itertools.product(values, values))
+a = pd.array(list(left), dtype="boolean")
+b = pd.array(list(right), dtype="boolean")
+
+
+def as_python(arr):
+    return [None if v is pd.NA else bool(v) for v in arr]
+
+
+rule_or = [back[max(rank[x], rank[y])] for x, y in zip(left, right)]
+rule_and = [back[min(rank[x], rank[y])] for x, y in zip(left, right)]
+print(as_python(a | b) == rule_or, as_python(a & b) == rule_and)
+for x, y, o, n in zip(left, right, as_python(a | b), as_python(a & b)):
+    print(f"{str(x):5s} {str(y):5s}  or {str(o):5s}  and {n}")
+
+print(pd.Series([True, None], dtype="boolean").any(),
+      pd.Series([False, None], dtype="boolean").any(),
+      pd.Series([False, None], dtype="boolean").any(skipna=False))
 ```
 
 ```text
-DataFrame.isna(
-    self
-)
-NDFrame.fillna(
-    value: 'Hashable | Mapping | Series | DataFrame'
-    limit: 'int | None' = None
-)  # 3 more parameters
-DataFrame.dropna(
-    axis: 'Axis' = 0
-    how: 'AnyAll | lib.NoDefault' = <no_default>
-    thresh: 'int | lib.NoDefault' = <no_default>
-    subset: 'IndexLabel | AnyArrayLike | None' = None
-)  # 3 more parameters
-DataFrame.groupby(
-    by=None
-    observed: 'bool' = True
-    dropna: 'bool' = True
-)  # 5 more parameters
-Series.mean(
-    skipna: 'bool' = True
-)  # 4 more parameters
-NDFrame.interpolate(
-    method: 'InterpolateOptions' = 'linear'
-    limit: 'int | None' = None
-)  # 6 more parameters
-NDFrame.ffill(
-    limit: 'None | int' = None
-)  # 4 more parameters
-null_report(
-    df: 'pd.DataFrame'
-)
-determinants(
-    df: 'pd.DataFrame'
-    max_levels: 'int' = 12
-)
+True True
+True  True   or True   and True
+True  False  or True   and False
+True  None   or True   and None
+False True   or True   and False
+False False  or False  and False
+False None   or None   and False
+None  True   or True   and None
+None  False  or None   and False
+None  None   or None   and None
+True False <NA>
 ```
 
-| Parameter | Default | What it does here | What goes wrong |
-|---|---|---|---|
-| `isna()` | — | a boolean table: `True` where a value is missing | — |
-| `fillna(value)` | required | the value to put in place of a missing value | `fillna(0)` on `duration_s` moves the mean from 108.73 to 103.12 |
-| `fillna(limit=...)` | `None` | the largest number of values to fill in a row | — |
-| `dropna(how=...)` | `any` when not set | `any` drops a row with one null, `all` drops a row with only nulls | `dropna()` removes 4,686 of 20,000 rows |
-| `dropna(subset=...)` | `None` | look only at these columns | `subset=["cell_id"]` removes 277 rows |
-| `dropna(thresh=...)` | not set | keep rows with at least this many values | `thresh=9` on 9 columns is the same as `how="any"` |
-| `groupby(dropna=...)` | `True` | `False` keeps a group for the missing key | `True` loses 277 calls: totals of 19,723 against 20,000 |
-| `groupby(observed=...)` | `True` | for category keys, show only the groups that occur | `False` gives a row for an empty category |
-| `mean(skipna=...)` | `True` | `False` gives `NaN` when any value is missing | the mean of `duration_s` is `NaN` |
-| `interpolate(method=..., limit=...)` | `'linear'`, `None` | fill a gap along the index | no `limit`: all 42 missing steps filled, the 2-hour outage included. `limit=3` leaves 21 |
-| `ffill(limit=...)` | `None` | repeat the last value | `limit=3` leaves 21 of 42 |
-| `null_report(df)` | required | nulls and their share, for each column that has any | — |
-| `determinants(df, max_levels=12)` | `12` | for each column with nulls, the columns that decide it | finds exact relations only, not weaker ones |
+The rule of the smaller and the larger value gives all nine results of pandas. An unknown value decides nothing when the other side is enough: "true or unknown" is true, and "false and unknown" is false. The last line shows the same logic in a reduction.
 
-`null_report` returns a DataFrame. `determinants` returns a dict of column name to a list of column names.
+With `skipna=False`, "is any value true" over `[False, <NA>]` is `<NA>`: the unknown value can be true. The default skips the unknown value and says `False`.
+
+## Reference
+
+| Callable | Introduced in | Contract |
+|---|---|---|
+| `pd.DataFrame.isna` | How pandas marks a missing value | a boolean table: `True` where a value is missing |
+| `pdbook.nulls.null_report` | Count them, then ask why | count and share of nulls, for each column that has any |
+| `pdbook.nulls.determinants` | Count them, then ask why | the columns that decide exactly whether a column is null |
+| `pd.DataFrame.groupby` | Count them, then ask why ([Chapter 8](08-group-by.md) has the block) | groups of rows by the values of keys; a missing key is dropped by default |
+| `pd.Series.mean` | Aggregations skip nulls | the mean of the values that are not missing |
+| `pd.DataFrame.dropna` | Fill, drop or keep | the table without the rows that have nulls |
+| `pd.Series.fillna` | Fill, drop or keep | each missing value replaced by one value |
+| `pd.Series.interpolate` | Time series: gaps | a line through each gap, with an optional limit |
+| `pd.Series.ffill` | Time series: gaps | the last known value repeated into each gap |
 
 ## What you have now
 

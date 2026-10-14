@@ -38,6 +38,23 @@ False
 
 The same reading, 16:30, is a different instant in each zone. Belgium is two hours ahead of UTC in September, so 16:30 in Brussels is 14:30 in UTC, and the last line is `False`. Store timestamps as UTC, and convert at the edge, when you show them or group by day.
 
+The block used the methods of one `Timestamp`. For a column, the same two methods are on the `dt` accessor.
+
+#### `pd.Series.dt.tz_convert`
+
+```text
+pd.Series.dt.tz_convert(
+    self,
+    tz,
+)
+```
+
+The method shows each aware timestamp in another zone. The instant does not change.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `tz` | required | the zone, such as `"Europe/Brussels"` or `"UTC"`. `None` converts to UTC and removes the zone | on a naive column it raises `TypeError`: use `tz_localize` first. — (the stored integers do not change) |
+
 The accessor `dt` gives the parts: `dt.hour`, `dt.dayofweek`, `dt.date`, `dt.floor("h")`, `dt.strftime(...)`. The parts depend on the zone of the column. Convert first.
 
 ## Summer time
@@ -71,6 +88,25 @@ missing  : ValueError
 
 On 25 October 2026 the clocks go from 03:00 back to 02:00, so the reading 02:30 happens twice. On 28 March 2027 they go from 02:00 to 03:00, so 02:30 never happens. pandas refuses both and does not guess. You choose with `ambiguous=` and `nonexistent=`. A system that logs local time without the offset cannot tell the two readings apart. A log of this kind is ambiguous for one hour in each year.
 
+#### `pd.Series.dt.tz_localize`
+
+```text
+pd.Series.dt.tz_localize(
+    self,
+    tz,
+    ambiguous='raise',
+    nonexistent='raise',
+)
+```
+
+The method attaches a zone to each naive timestamp. The reading stays, and the instant is the reading in that zone.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `tz` | required | the zone of the readings. `None` removes the zone and keeps the local reading | on an aware column it raises `TypeError`: use `tz_convert`. The reading is a different instant in each zone |
+| `ambiguous` | `'raise'` | what to do with a reading that happens twice: `'raise'`, `'infer'` from the order of the rows, `'NaT'`, `True` for summer time, `False` for winter time, or an array of booleans, one for each row | `2026-10-25 02:30` raises. `True` on a column applies to every row, so two different calls at "02:30" both get `+02:00`. Use `'infer'` or an array |
+| `nonexistent` | `'raise'` | what to do with a reading that never happens: `'raise'`, `'shift_forward'`, `'shift_backward'`, `'NaT'` or a `Timedelta` | `2027-03-28 02:30` raises. `'shift_forward'` gives 03:00, and `pd.Timedelta("1h")` gives 03:30: two different answers to the same question |
+
 ## A day with 25 hours
 
 The KPI file covers 24 to 26 October 2026 in UTC, and the clocks change on the 25th. Count the hours of each local day with `date_range`:
@@ -88,6 +124,39 @@ print(per_day.to_dict())
 ```
 
 The 25th has 25 hours. A daily report that assumes 24 hours is wrong for one day of the year: a "calls per hour" figure divides by 24 and misses by 4%, and a rolling window of 24 rows is not one day on that date. Use the time itself, not the number of rows, to define a day.
+
+#### `pd.date_range`
+
+```text
+pd.date_range(
+    start=None,
+    end=None,
+    periods=None,
+    freq=None,
+    tz=None,
+    normalize=False,
+    name=None,
+    inclusive='both',
+    *,
+    unit=None,
+    **kwargs,
+)
+```
+
+The function returns a `DatetimeIndex` of regular timestamps. Give exactly three of `start`, `end`, `periods` and `freq`.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `start` | `None` | the first timestamp | — |
+| `end` | `None` | the last timestamp | all four of `start`, `end`, `periods` and `freq` raise `ValueError` |
+| `periods` | `None` | the number of timestamps | — |
+| `freq` | `None` | the step: `"h"`, `"5min"`, `"D"`, `"MS"` for the start of a month, `"ME"` for the end. With `None` and no `periods`, one day | `"M"` raises `ValueError` in pandas 3.0: write `"ME"`. On a zone with summer time, `"D"` steps from local midnight to local midnight, and `"24h"` steps 24 hours: on 25 October the second gives 23:00 |
+| `tz` | `None` | the zone of the timestamps. With `None`, naive | with `tz="Europe/Brussels"` the day of 25 October has 25 hours |
+| `normalize` | `False` | set `start` and `end` to midnight first | — |
+| `name` | `None` | the name of the index | — |
+| `inclusive` | `'both'` | which ends are in the range: `'both'`, `'neither'`, `'left'` or `'right'` | — |
+| `unit` | `None` | the resolution, such as `"s"` or `"us"`. With `None`, the resolution of the inputs | — |
+| `**kwargs` | — | accepted and passed on. pandas 3.0 knows no extra name here | an old name such as `closed=` raises `TypeError` |
 
 ## A DatetimeIndex
 
@@ -114,6 +183,29 @@ True 851
 ```
 
 The string `"2026-10-25"` selects the whole UTC day. The slice with two times includes both ends, as `.loc` does ([Chapter 3](03-selection.md)). The hour from 08:00 to 08:59 has 12 samples. The method `between_time` takes the same minutes of the three days: 36 samples.
+
+#### `pd.DataFrame.between_time`
+
+```text
+pd.DataFrame.between_time(
+    self,
+    start_time,
+    end_time,
+    inclusive='both',
+    axis=None,
+)
+```
+
+The method returns the rows whose clock time is between two times, on any date.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `start_time` | required | the first clock time, such as `"08:00"` | — |
+| `end_time` | required | the last clock time. A time before `start_time` crosses midnight: `"23:00"` to `"01:00"` is two hours | — |
+| `inclusive` | `'both'` | which ends are in: `'both'`, `'neither'`, `'left'` or `'right'` | `"08:00"` to `"09:00"` with `'both'` takes the sample at 09:00 of each day: 39 samples and not 36 |
+| `axis` | `None` | `0` for the index, `1` for the columns | on a table without a `DatetimeIndex` it raises `TypeError` |
+
+The clock time is read in the zone of the index. The same call on the series in Brussels time gives 35 samples, because the three UTC days are not the three local days.
 
 The partial-string slice needs a sorted index. The call records are not sorted, and then you get an error:
 
@@ -171,6 +263,37 @@ The month has 720 hours, 30 days times 24, and the counts add up to 20,000. The 
 
 For a mean, an empty bin is `NaN` and not 0, because the mean of nothing is not zero. That is the second reason to keep `n` next to a mean.
 
+#### `pd.DataFrame.resample`
+
+```text
+pd.DataFrame.resample(
+    self,
+    rule,
+    closed=None,
+    label=None,
+    convention='start',
+    on=None,
+    level=None,
+    origin='start_day',
+    offset=None,
+    group_keys=False,
+)
+```
+
+The method groups the rows into time bins by the `DatetimeIndex`, or by the column `on`. Call an aggregation on the result.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `rule` | required | the size of the bins: `"5min"`, `"h"`, `"D"`, `"W"`, `"MS"` and so on | empty bins stay: 720 hours, 4 with no call. A table without a `DatetimeIndex` and without `on` raises `TypeError` |
+| `closed` | `None` | which end of a bin is inside it: `'left'` or `'right'`. `None` means `'left'`, except for `"W"`, `"ME"`, `"QE"` and `"YE"` | with `"W"`, the default is `'right'`: the bins end on Sunday and carry the label of that Sunday. The first bin of this month is 6 September, not 30 August |
+| `label` | `None` | which end of a bin names it. The same defaults as `closed` | — |
+| `convention` | `'start'` | for a `PeriodIndex` only: put the value at the start or the end of the new period | — |
+| `on` | `None` | a column of timestamps to use instead of the index | — |
+| `level` | `None` | for a MultiIndex, the level of timestamps | — |
+| `origin` | `'start_day'` | the point from which the bins are counted: `'start_day'` is midnight of the first day, `'epoch'` is 1970-01-01 | for bins that do not divide a day, such as `"7h"`, the bins differ: the first starts at 21:00 with `'start_day'` and at 16:00 with `'epoch'` |
+| `offset` | `None` | a shift of the origin, such as `"6h"` | with `"D"`, it has no effect and gives a `RuntimeWarning`. A day of 06:00 to 06:00 needs `"24h"` |
+| `group_keys` | `False` | for `apply` on the result: add the bin labels as an index level | — |
+
 ## Build: hourly_kpi
 
 `hourly_kpi` does the steps that a person does by hand, and it keeps the evidence of each step:
@@ -205,6 +328,24 @@ The raw file has 5,104 rows. 25 of them are repeats of another row, which leaves
 354 hours are full, 71 have 11 samples, 5 have 10, and 2 have none. The two empty hours are the outage of the cell `BRU-004`, and they show `NaN` in the mean and 0 in `n`. The samples add up to 5,079, so no sample was lost or counted twice. Each cell has 25 hours on 25 October.
 
 A mean of 11 samples is not the same quality as a mean of 12 samples. A mean of 0 samples is not a value. A dashboard that draws only the mean shows all hours with the same confidence. Draw `n` or `complete` with it.
+
+#### `pdbook.kpi.hourly_kpi`
+
+```text
+pdbook.kpi.hourly_kpi(
+    kpi,
+    tz='Europe/Brussels',
+    full_hour=12,
+)
+```
+
+The function returns one row for each cell and local hour: the mean load, the number of samples `n`, and `complete`.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `kpi` | required | the KPI samples, with `ts`, `cell_id` and `prb_util_pct` | — (5,104 rows, 25 repeats, 432 hours, 354 complete) |
+| `tz` | `'Europe/Brussels'` | the zone of the hours | — |
+| `full_hour` | `12` | the number of samples that makes an hour complete | `full_hour=11` makes 425 hours complete instead of 354: the threshold decides what the dashboard calls good |
 
 ## How it works
 
@@ -244,70 +385,49 @@ The two columns have different dtypes and hold the same integers. The first stor
 - **Failure.** A naive timestamp has no zone, so the same reading is different points in time for two readers.
 - **Cost.** A zone conversion is one pass of arithmetic with the zone rules, and no copy of the text. A `resample` makes every bin, empty ones included.
 
-## Reference
+The rule "a `floor` and a `groupby`" holds in UTC. In local time it breaks on the night of the clock change, and `resample` does not. The next block takes one cell of the KPI file in Brussels time. On 25 October, that time has the hour from 02:00 to 03:00 twice:
 
 ```python
 import pandas as pd
 
-from pdbook.kpi import hourly_kpi
-from pdbook.sigs import show_signature
+from pdbook.io import load_kpi
 
-show_signature(pd.Series.dt.tz_convert, ["tz"])
-show_signature(pd.Series.dt.tz_localize, ["tz", "ambiguous", "nonexistent"])
-show_signature(pd.DataFrame.resample, ["rule", "closed", "label"])
-show_signature(pd.date_range, ["start", "end", "periods", "freq", "tz", "inclusive"])
-show_signature(pd.DataFrame.between_time, ["start_time", "end_time", "inclusive"])
-show_signature(hourly_kpi)
+kpi = load_kpi().drop_duplicates(["ts", "cell_id"])
+one = kpi[kpi["cell_id"] == "ANT-001"].set_index("ts")["prb_util_pct"]
+local = one.tz_convert("Europe/Brussels")
+try:
+    local.index.floor("h")
+except ValueError as error:
+    print("floor: ValueError:", str(error)[:46])
+
+by_local = local.resample("h").size()
+day = by_local[by_local.index.strftime("%Y-%m-%d") == "2026-10-25"]
+print(len(day), [ts.strftime("%H:%M%z") for ts in day.index[1:5]])
+
+by_utc = one.resample("h").size()
+print(by_local.index.tz_convert("UTC").equals(by_utc.index), by_local.tolist() == by_utc.tolist())
 ```
 
 ```text
-DatetimeArray.tz_convert(
-    tz
-)  # 1 more parameters
-DatetimeArray.tz_localize(
-    tz
-    ambiguous: 'TimeAmbiguous' = 'raise'
-    nonexistent: 'TimeNonexistent' = 'raise'
-)  # 1 more parameters
-NDFrame.resample(
-    rule
-    closed: "Literal['right', 'left'] | None" = None
-    label: "Literal['right', 'left'] | None" = None
-)  # 7 more parameters
-date_range(
-    start=None
-    end=None
-    periods=None
-    freq=None
-    tz=None
-    inclusive: 'IntervalClosedType' = 'both'
-)  # 4 more parameters
-NDFrame.between_time(
-    start_time
-    end_time
-    inclusive: 'IntervalClosedType' = 'both'
-)  # 2 more parameters
-hourly_kpi(
-    kpi: 'pd.DataFrame'
-    tz: 'str' = 'Europe/Brussels'
-    full_hour: 'int' = 12
-)
+floor: ValueError: Cannot infer dst time from 2026-10-25 02:00:00
+25 ['01:00+0200', '02:00+0200', '02:00+0100', '03:00+0100']
+True True
 ```
 
-| Parameter | Default | What it does here | What goes wrong |
-|---|---|---|---|
-| `tz_convert(tz)` | required | show an aware timestamp in another zone | — (the stored integers do not change) |
-| `tz_localize(tz)` | required | attach a zone to a naive timestamp | the reading is a different instant in each zone |
-| `tz_localize(ambiguous=...)` | `'raise'` | what to do with a reading that happens twice | `2026-10-25 02:30` raises; `True` and `False` choose the first and the second |
-| `tz_localize(nonexistent=...)` | `'raise'` | what to do with a reading that never happens | `2027-03-28 02:30` raises |
-| `resample(rule)` | required | `"h"`, `"D"`, `"5min"` and so on | empty bins stay: 720 hours, 4 with no call |
-| `resample(closed=..., label=...)` | `None`, `None` | which end of a bin is inside, and which end names it | — |
-| `date_range(start, end, freq, tz)` | `None` | a regular grid of timestamps | with `tz="Europe/Brussels"` the day of 25 October has 25 hours |
-| `date_range(inclusive=...)` | `'both'` | which ends are in the range | — |
-| `between_time(start_time, end_time)` | required | rows between two clock times, any date | — |
-| `hourly_kpi(kpi, tz, full_hour)` | required, `'Europe/Brussels'`, `12` | hourly mean for each cell, with `n` and `complete` | 5,104 rows, 25 repeats, 432 hours, 354 complete |
+`floor("h")` on local time must give the reading 02:00, and that reading is two instants. It refuses. `resample("h")` gives 25 bins for the day, and two of them are 02:00, one with `+0200` and one with `+0100`. The last line shows how:
 
-`resample` returns a resampler object. Call `size`, `mean` or `agg` on it.
+the bins in Brussels time are the bins in UTC, the same instants with the same counts, with local labels. `resample` cuts on the stored integers. A bin of one hour does not depend on the zone. A bin of one day does, because a local day is 23, 24 or 25 hours long.
+
+## Reference
+
+| Callable | Introduced in | Contract |
+|---|---|---|
+| `pd.Series.dt.tz_convert` | Timestamps with a zone | the same instants shown in another zone |
+| `pd.Series.dt.tz_localize` | Summer time | a zone attached to naive readings; ambiguous and missing readings raise by default |
+| `pd.date_range` | A day with 25 hours | a regular `DatetimeIndex`; `"D"` follows local midnight |
+| `pd.DataFrame.between_time` | A DatetimeIndex | the rows between two clock times, in the zone of the index |
+| `pd.DataFrame.resample` | resample | time bins on the index; empty bins stay |
+| `pdbook.kpi.hourly_kpi` | Build: hourly_kpi | one row for each cell and local hour, with `n` and `complete` |
 
 ## What you have now
 

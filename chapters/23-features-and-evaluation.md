@@ -44,6 +44,44 @@ The cutoff in UTC is 22:00 on 21 September, because Brussels is two hours ahead.
 
 The feature table has one row for each of the 600 subscribers. Every subscriber has at least 3 calls in the past, so there are no missing features here. In another table a subscriber with no past calls has a missing `answered_share`, and that must be a decision and not an accident.
 
+The functions of the first half are in [`pdbook/features.py`](../pdbook/features.py).
+
+#### `pdbook.features.past_features`
+
+```text
+pdbook.features.past_features(
+    calls,
+    subscribers,
+    cutoff,
+)
+```
+
+The function returns one row for each subscriber id: `calls`, `answered_share`, `talk_min`, `active_days` and `days_since_last`, from the calls before the cutoff only.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `calls` | required | the call records, with a zoned `start` | — |
+| `subscribers` | required | the subscriber ids, as a Series. Each id gets a row | an id with no past call gets `calls` 0 and `NaN` for `answered_share` and `days_since_last` |
+| `cutoff` | required | the cutoff as text, such as `"2026-09-22"`. It is local midnight in `Europe/Brussels` | a `Timestamp` that already has a zone raises `ValueError`. A UTC midnight would put the calls from 22:00 to 24:00 on the wrong side: 8 calls |
+
+#### `pdbook.features.target`
+
+```text
+pdbook.features.target(
+    calls,
+    subscribers,
+    cutoff,
+)
+```
+
+The function returns, for each subscriber id, the number of calls at or after the cutoff.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `calls` | required | the call records | — |
+| `subscribers` | required | the subscriber ids | an id with no future call gets 0, not `NaN` |
+| `cutoff` | required | the same cutoff as for `past_features` | a different cutoff for the target and the features leaks or loses days, with no error |
+
 ## The easy feature leaks
 
 The shortest code for "calls of each subscriber" is a `groupby` over the whole table. It includes the future, which is the thing that we want to predict:
@@ -79,6 +117,22 @@ The leaky feature looks better: a higher correlation and a lower error. It is be
 
 The future is not there on that day. The difference here is small, 2.87 against 2.00 calls, because most of the signal is the difference between heavy and light subscribers. A leak can be small, and it is still wrong.
 
+#### `pdbook.features.leaky_features`
+
+```text
+pdbook.features.leaky_features(
+    calls,
+    subscribers,
+)
+```
+
+The function returns the count of calls of each subscriber over the whole table. It is the easy version, and it leaks the target.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `calls` | required | the call records | it has no cutoff, so it reads the future: it fails `assert_no_leak` |
+| `subscribers` | required | the subscriber ids | — |
+
 ## Test for the leak
 
 Reading the code is not a test. The test is a property. A feature that uses only the past does not change when the future changes. `assert_no_leak` changes the future in two ways and compares the features before and after:
@@ -110,6 +164,26 @@ The function that uses the past passes. The function that groups over the whole 
 
 My first version of this test shuffled the callers of the future, and it did not find the leak. A shuffle keeps the number of calls of each caller, so a count does not move. A test of a property must change what the feature reads.
 
+#### `pdbook.features.assert_no_leak`
+
+```text
+pdbook.features.assert_no_leak(
+    feature_fn,
+    calls,
+    subscribers,
+    cutoff,
+)
+```
+
+The function returns nothing when `feature_fn(calls, subscribers)` gives the same table after each of two changes to the future. Otherwise it raises `AssertionError` and names the change.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `feature_fn` | required | a function of `(calls, subscribers)` that returns the features | — |
+| `calls` | required | the call records | — |
+| `subscribers` | required | the subscriber ids | — |
+| `cutoff` | required | the cutoff that defines the future for the test | the test trusts this cutoff. A feature with a cutoff of 22 September passes a test with a cutoff of 25 September, although it is wrong for that later date. A feature with a cutoff of 25 September fails a test at 22 September, as it must |
+
 ## Compare two configurations
 
 The file `data/runs.jsonl` holds the results of an evaluation: 150 tasks, run with two configurations, `baseline` and `improved`, with 3 seeds each. Each line has a nested `tokens` object, and `load_runs` flattens it:
@@ -138,6 +212,20 @@ print(int((diff > 0).sum()), int((diff < 0).sum()), int((diff == 0).sum()))
 ```
 
 The pass rate is 0.576 for `baseline` and 0.640 for `improved`, from 450 runs each: a difference of 0.064. The second part is the paired table: for each task, the mean over its three seeds for each configuration. 67 tasks are better with `improved`, 42 are worse and 41 are equal. The mean of the 150 differences is the same 0.064.
+
+#### `pdbook.evals.load_runs`
+
+```text
+pdbook.evals.load_runs(
+    path=None,
+)
+```
+
+The function returns one row for each task, configuration and seed. The nested `tokens` object becomes the columns `tokens.prompt` and `tokens.completion`, with `json_normalize` ([Chapter 22](22-json-and-nested-records.md)).
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `path` | `None` | the JSON-lines file. With `None`, `data/runs.jsonl` | — |
 
 A claim that one configuration is better needs an interval. `compare_configs` resamples the *tasks* with replacement 2,000 times, and takes the mean difference of each resample:
 
@@ -175,6 +263,28 @@ The interval of the difference is 0.002 to 0.124. The lower end is close to zero
 The breakdown by category is the trap of the table. Each category has 30 tasks, and the standard error of its difference is between 0.06 and 0.075. Four of the five differences are inside two standard errors of zero. `roaming` is 0.144, which is 2.1 standard errors.
 
 Five categories give five chances. Suppose that no category has a real effect. The chance that at least one of five is beyond 1.96 standard errors is 1 − 0.95⁵, which is 23%. A report that says "the improvement is in `roaming`" can be a report of noise. Report the interval for the whole set, and name the number of tasks behind every cell.
+
+#### `pdbook.evals.compare_configs`
+
+```text
+pdbook.evals.compare_configs(
+    runs,
+    a='baseline',
+    b='improved',
+    n_boot=2000,
+    seed=0,
+)
+```
+
+The function returns a dict: `tasks`, `rate_a`, `rate_b`, `diff` (b minus a), `paired_se`, `unpaired_se`, `ci_low`, `ci_high`, `tasks_better` and `tasks_worse`.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `runs` | required | the runs of `load_runs` | — |
+| `a` | `'baseline'` | the configuration to compare against | a name that is not in `runs` raises `KeyError`. Swap `a` and `b`, and the difference changes sign |
+| `b` | `'improved'` | the configuration to test | — |
+| `n_boot` | `2000` | the number of bootstrap resamples | with 50, the lower end went from 0.006 to 0.020 over the seeds 0 to 5. With 2000, it went from 0.002 to 0.004 over the seeds 0 to 2 |
+| `seed` | `0` | the seed of the resampling | — |
 
 ## Build: the results as a table
 
@@ -243,76 +353,56 @@ Five seeds give five intervals. The lower ends are 0.000 to 0.007. The upper end
 - **Failure.** The unit of the draw is wrong: the runs, and not the tasks. The interval is then too narrow if runs of one task are alike.
 - **Cost.** 2,000 resamples of 150 numbers each, which is a fraction of a second. The cost is small, so use enough resamples that the ends do not move in the second decimal.
 
-## Reference
+The failure line says that the unit of the draw matters when the runs of one task are alike. The next block measures how much it matters here. It resamples three sets. The first is the 150 task differences. The second is the 450 differences of task and seed, as if they were independent. The third is the 150 task differences copied three times, the extreme case of runs that are all alike:
 
 ```python
-import pandas as pd
+import numpy as np
 
-from pdbook.evals import compare_configs, load_runs
-from pdbook.features import assert_no_leak, leaky_features, past_features, target
-from pdbook.sigs import show_signature
+from pdbook.evals import load_runs
 
-show_signature(pd.json_normalize, ["data", "sep"])
-show_signature(pd.DataFrame.groupby, ["by", "observed"])
-show_signature(past_features)
-show_signature(target)
-show_signature(leaky_features)
-show_signature(assert_no_leak)
-show_signature(load_runs)
-show_signature(compare_configs)
+runs = load_runs()
+wide = runs.pivot_table(index=["task_id", "seed"], columns="config", values="passed")
+by_pair = (wide["improved"] - wide["baseline"]).to_numpy()
+by_task = (wide["improved"] - wide["baseline"]).groupby(level="task_id").mean().to_numpy()
+copies = np.repeat(by_task, 3)
+rng = np.random.default_rng(0)
+
+
+def interval(x, n=2000):
+    means = [x[rng.integers(0, len(x), len(x))].mean() for _ in range(n)]
+    return np.percentile(means, [2.5, 97.5])
+
+
+for name, x in [("150 tasks", by_task), ("450 pairs as independent", by_pair), ("150 tasks copied 3 times", copies)]:
+    low, high = interval(x)
+    print(f"{name:26s} {low:6.3f} {high:6.3f}  width {high - low:.3f}")
+seeds = wide["baseline"].unstack()
+print("correlation of two seeds of one task:", round(float(np.corrcoef(seeds[0], seeds[1])[0, 1]), 2))
 ```
 
 ```text
-json_normalize(
-    data: 'dict | list[dict] | Series'
-    sep: 'str' = '.'
-)  # 6 more parameters
-DataFrame.groupby(
-    by=None
-    observed: 'bool' = True
-)  # 6 more parameters
-past_features(
-    calls: 'pd.DataFrame'
-    subscribers: 'pd.Series'
-    cutoff: 'str'
-)
-target(
-    calls: 'pd.DataFrame'
-    subscribers: 'pd.Series'
-    cutoff: 'str'
-)
-leaky_features(
-    calls: 'pd.DataFrame'
-    subscribers: 'pd.Series'
-)
-assert_no_leak(
-    feature_fn
-    calls: 'pd.DataFrame'
-    subscribers: 'pd.Series'
-    cutoff: 'str'
-)
-load_runs(
-    path: 'str | pathlib.Path | None' = None
-)
-compare_configs(
-    runs: 'pd.DataFrame'
-    a: 'str' = 'baseline'
-    b: 'str' = 'improved'
-    n_boot: 'int' = 2000
-    seed: 'int' = 0
-)
+150 tasks                   0.002  0.124  width 0.122
+450 pairs as independent    0.004  0.120  width 0.116
+150 tasks copied 3 times    0.031  0.099  width 0.067
+correlation of two seeds of one task: 0.19
 ```
 
-| Parameter | Default | What it does here | What goes wrong |
-|---|---|---|---|
-| `past_features(calls, subscribers, cutoff)` | required | one row for each subscriber id, from the calls before the cutoff in `Europe/Brussels` | a UTC midnight puts calls from 22:00 to 24:00 on the wrong side |
-| `target(calls, subscribers, cutoff)` | required | calls from the cutoff on, 0 for a subscriber with none | — |
-| `leaky_features(calls, subscribers)` | required | the same count over the whole table | fails `assert_no_leak` |
-| `assert_no_leak(feature_fn, calls, subscribers, cutoff)` | required | raises `AssertionError` when the features move if the future changes | a shuffle of the future callers does not move a count |
-| `load_runs(path=...)` | `None` | the runs, with `tokens.prompt` and `tokens.completion` as columns | — |
-| `compare_configs(runs, a, b, n_boot, seed)` | `'baseline'`, `'improved'`, `2000`, `0` | a dict: rates, paired difference, standard errors, interval, tasks better and worse | the interval ends move by less than 0.01 with the seed |
+The draw of 450 pairs gives an interval only a little narrower than the draw of 150 tasks. The seeds of one task are only weakly alike here: the correlation of two seeds is small, so the 450 pairs carry almost 450 pieces of information. The copies show the other end.
 
-`compare_configs` returns a dict of floats. Its interval is for the mean over tasks of the per-task difference.
+Three copies of one result carry no more information than one. The interval still shrinks by about the square root of 3, with no new evidence. Real evaluations sit between the two. Draw the tasks, and the interval is right in both cases.
+
+## Reference
+
+| Callable | Introduced in | Contract |
+|---|---|---|
+| `pdbook.features.past_features` | The question and the cutoff | features from the calls before a local cutoff |
+| `pdbook.features.target` | The question and the cutoff | the calls from the cutoff on, 0 for none |
+| `pdbook.features.leaky_features` | The easy feature leaks | the count over the whole table; it leaks |
+| `pdbook.features.assert_no_leak` | Test for the leak | `AssertionError` when the features move with the future |
+| `pdbook.evals.load_runs` | Compare two configurations | the runs as a flat table |
+| `pdbook.evals.compare_configs` | Compare two configurations | rates, the paired difference, and a bootstrap interval over tasks |
+| `pd.json_normalize` | Compare two configurations ([Chapter 22](22-json-and-nested-records.md) has the block) | nested dicts as columns |
+| `pd.DataFrame.groupby` | Compare two configurations ([Chapter 8](08-group-by.md) has the block) | groups of rows by keys |
 
 ## What you have now
 

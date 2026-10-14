@@ -39,6 +39,21 @@ after a write to a second name : [0, 0, 0]
 
 The writes to `col` and `sub` did not change `a`. The write through `same` did, because `same = a` does not make a new object. It gives a second name to the same object. Assignment of a name never copies. Use `a.copy()` when you want a separate object.
 
+#### `pd.DataFrame.copy`
+
+```text
+pd.DataFrame.copy(
+    self,
+    deep=True,
+)
+```
+
+The method returns a new object with the same data.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `deep` | `True` | `True` copies the data and the index now. `False` shares the memory until a write | `b = a` is not a copy: a write through `b` changes `a`. Under copy-on-write, `deep=False` is also safe: a write to the shallow copy does not reach `a` |
+
 ## Chained assignment
 
 `df[mask]["x"] = value` has two steps. The first, `df[mask]`, makes a derived object. The second writes to it. Under the rule, the write goes to a copy that is thrown away:
@@ -87,6 +102,28 @@ print(df["a"].tolist())
 ```
 
 `df["a"]` is a derived object. `fillna(inplace=True)` fills that object and not the table. The form `df["a"] = df["a"].fillna(0)` is clear and changes the table. Prefer it, and write `inplace=True` nowhere.
+
+#### `pd.DataFrame.fillna`
+
+```text
+pd.DataFrame.fillna(
+    self,
+    value,
+    *,
+    axis=None,
+    inplace=False,
+    limit=None,
+)
+```
+
+The method returns the table with each missing value replaced. [Chapter 5](05-missing-data.md) has the Series method, which has the same parameters.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `value` | required | one value for all columns, or a dict or Series of column to value | a key that is not a column is ignored, with no message |
+| `axis` | `None` | `0` or `1`: the axis along which `limit` counts | with a dict `value` and `axis=1`, it raises `ValueError` |
+| `inplace` | `False` | with `True`, change the table and return `None` | `df["a"].fillna(0, inplace=True)` warns with `ChainedAssignmentError` and changes nothing |
+| `limit` | `None` | the largest number of values to fill in each column | — |
 
 ## A function that changes its argument
 
@@ -147,6 +184,27 @@ ValueError: assignment destination is read-only
 
 Ask for `copy=True` when you need an array that you can write to.
 
+#### `pd.Series.to_numpy`
+
+```text
+pd.Series.to_numpy(
+    self,
+    dtype=None,
+    copy=False,
+    na_value=<no_default>,
+    **kwargs,
+)
+```
+
+The method returns the values as a NumPy array.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `dtype` | `None` | the type of the array. With `None`, the type that holds the values: `object` for `str`, and `float64` for `Int64` with a gap | `dtype="int64"` on a Series with `NaN` gives `-9223372036854775808` in its place, with only a `RuntimeWarning` |
+| `copy` | `False` | `True` always returns a new array that you can write to | with `False`, the array of a NumPy column is read-only: a write raises `ValueError`. A change of `dtype` makes a new array, which is writeable |
+| `na_value` | `<no_default>` | the value for a missing value in the array. Not set means the missing marker of the type | — (`na_value=0` with `dtype="int64"` gives a clean integer array) |
+| `**kwargs` | — | passed to the `to_numpy` of the array type | a name that the type does not know raises `TypeError` |
+
 ## The other traps
 
 Copy-on-write fixes one class of surprise. The others are in the data, and the earlier chapters showed each one. The module [`pdbook/traps.py`](../pdbook/traps.py) holds ten of them as pairs of functions, on small data, so that you can run them and see them:
@@ -187,6 +245,40 @@ Each row is a result that looks right and is not. The first value is what the us
 10. `mean` skips nulls, so "the mean" is the mean of the known values ([Chapter 5](05-missing-data.md)).
 
 The ninth is new in this chapter. A float comparison with `==` is a trap in every column of `float64`. Use `np.isclose` or `abs(a - b) < tolerance`, and use integers (cents, not euros) for money.
+
+#### `pdbook.traps.Trap`
+
+```text
+pdbook.traps.Trap(
+    name,
+    chapter,
+    naive,
+    correct,
+)
+```
+
+The class is a dataclass: one trap as a name, the chapter that shows it, and two functions with no arguments.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `name` | required | a sentence that says what goes wrong | — |
+| `chapter` | required | the chapter that shows the trap | — |
+| `naive` | required | a function that runs the usual code and returns its result | — |
+| `correct` | required | a function that runs the intended code | — |
+
+#### `pdbook.traps.live`
+
+```text
+pdbook.traps.live(
+    trap,
+)
+```
+
+The function returns `True` when `naive()` and `correct()` give different results.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `trap` | required | a `Trap` | it compares with `!=`, so the two functions must return plain values: numbers, lists or strings. Two NumPy arrays give an array of booleans and not one answer. An error in one function goes to the caller. All 10 traps are live in this version |
 
 ## Build: how to use the catalog
 
@@ -238,61 +330,44 @@ Before the write, the two objects share memory. After `sub.iloc[0, 0] = -1`, the
 - **Failure.** A name is not an object: `b = a` makes a second name. A function that assigns to its argument changes the caller's object.
 - **Cost.** A selection costs no copy. The first write costs one copy of the array that you write to, not of the whole table.
 
-## Reference
+The cost line says "the array that you write to". pandas keeps columns of one type together in one two-dimensional block, so a copy of the full block is possible. The next block makes a table with two integer columns, which share a block, and one float column. It selects all three, writes to one, and asks NumPy which columns still share memory with the original:
 
 ```python
+import numpy as np
 import pandas as pd
 
-from pdbook.sigs import show_signature
-from pdbook.traps import Trap, live
+df = pd.DataFrame({"x": np.arange(5), "y": np.arange(5) * 10, "z": np.arange(5.0)})
+print([str(block.dtype) + str(block.shape) for block in df._mgr.blocks])
 
-show_signature(pd.DataFrame.copy, ["deep"])
-show_signature(pd.Series.to_numpy, ["dtype", "copy", "na_value"])
-show_signature(pd.DataFrame.assign)
-show_signature(pd.DataFrame.fillna, ["value", "inplace"])
-show_signature(Trap)
-show_signature(live)
+sub = df[["x", "y", "z"]]
+shares = lambda: [bool(np.shares_memory(df[c].to_numpy(), sub[c].to_numpy())) for c in "xyz"]
+print("before the write:", shares())
+sub.iloc[0, 0] = -1
+print("after the write :", shares())
+print(df["x"].tolist(), sub["x"].tolist())
 ```
 
 ```text
-NDFrame.copy(
-    deep: 'bool' = True
-)  # 1 more parameters
-IndexOpsMixin.to_numpy(
-    dtype: 'npt.DTypeLike | None' = None
-    copy: 'bool' = False
-    na_value: 'object' = <no_default>
-)  # 2 more parameters
-DataFrame.assign(
-    self
-    **kwargs
-)
-NDFrame.fillna(
-    value: 'Hashable | Mapping | Series | DataFrame'
-    inplace: 'bool' = False
-)  # 3 more parameters
-Trap(
-    name: 'str'
-    chapter: 'int'
-    naive: 'Callable[[], Any]'
-    correct: 'Callable[[], Any]'
-)
-live(
-    trap: 'Trap'
-)
+['int64(2, 5)', 'float64(1, 5)']
+before the write: [True, True, True]
+after the write : [False, True, True]
+[0, 1, 2, 3, 4] [-1, 1, 2, 3, 4]
 ```
 
-| Parameter | Default | What it does here | What goes wrong |
-|---|---|---|---|
-| `copy(deep=...)` | `True` | a separate object | `b = a` is not a copy: a write through `b` changes `a` |
-| `to_numpy(copy=...)` | `False` | the NumPy array of a column | the array is read-only: a write raises `ValueError`; ask for `copy=True` to write |
-| `to_numpy(dtype=..., na_value=...)` | `None`, not set | the type of the array, and what a missing value becomes | — |
-| `assign(**kwargs)` | — | a new table with the columns added | — |
-| `fillna(value, inplace=...)` | required, `False` | fill missing values | `df["a"].fillna(0, inplace=True)` warns with `ChainedAssignmentError` and changes nothing |
-| `Trap(name, chapter, naive, correct)` | required | a trap as two functions of no arguments | — |
-| `live(trap)` | required | `True` when the two functions give different results | all 10 traps are live in this version |
+`x` and `y` are in one `int64` block of two rows, and `z` is in a `float64` block. Before the write, all three columns share memory. After the write to `x`, only `x` has its own copy: `y`, from the same block, and `z` still share.
 
-`copy` returns a new object that has its own data.
+pandas splits the block and copies one column. The block uses `_mgr`, an internal attribute that can change between versions. Use it to look, never in code that you keep.
+
+## Reference
+
+| Callable | Introduced in | Contract |
+|---|---|---|
+| `pd.DataFrame.copy` | The rule in pandas 3.0 | a separate object; under copy-on-write `deep=False` is safe too |
+| `pd.DataFrame.fillna` | Chained assignment | missing values replaced; `inplace=True` on a column does nothing |
+| `pd.DataFrame.assign` | A function that changes its argument ([Chapter 7](07-new-columns.md) has the block) | a new table with new columns |
+| `pd.Series.to_numpy` | Arrays from pandas | the values as a NumPy array, read-only unless copied |
+| `pdbook.traps.Trap` | The other traps | one trap: a name, a chapter, and two functions |
+| `pdbook.traps.live` | The other traps | `True` when the two functions of a trap disagree |
 
 ## What you have now
 

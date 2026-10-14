@@ -93,6 +93,38 @@ The label slice `0:1` is empty. Label 0 is in the last row and label 1 is in the
 
 A label slice on an index that is not sorted is not an error. It returns an empty result or the wrong rows. On the index 2, 0, 3, 1 the slice `0:1` returns the labels 0, 3 and 1, and label 3 is outside the range. Sort the index first with `sort_index()`, or select with a list of labels. Also note that `d.loc[0]` and `d.iloc[0]` are different rows.
 
+#### `pd.DataFrame.sort_index`
+
+```text
+pd.DataFrame.sort_index(
+    self,
+    *,
+    axis=0,
+    level=None,
+    ascending=True,
+    inplace=False,
+    kind='quicksort',
+    na_position='last',
+    sort_remaining=True,
+    ignore_index=False,
+    key=None,
+)
+```
+
+The method returns the table with its rows, or its columns, in the order of their labels.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `axis` | `0` | `0` sorts the rows, `1` sorts the columns | — |
+| `level` | `None` | for a MultiIndex, the level or levels to sort on ([Chapter 11](11-index-and-multiindex.md)) | — |
+| `ascending` | `True` | the direction. A list gives one direction for each level | without the sort, the slice `0:1` on the index 2, 0, 3, 1 returns the labels 0, 3 and 1 |
+| `inplace` | `False` | with `True`, change the table and return `None` | `df = df.sort_index(inplace=True)` sets `df` to `None` |
+| `kind` | `'quicksort'` | the sort algorithm. Only `'mergesort'` and `'stable'` keep the order of equal labels | — |
+| `na_position` | `'last'` | where a missing label goes: `'last'` or `'first'` | — |
+| `sort_remaining` | `True` | after a sort on one level of a MultiIndex, also sort on the other levels | with `False`, the rows with equal labels at the sorted level keep their old order |
+| `ignore_index` | `False` | with `True`, the result gets the labels 0, 1, 2 and so on | the sorted labels are lost |
+| `key` | `None` | a function that changes the labels before the sort. It receives the whole `Index`, not one label | `key=str.lower` raises `TypeError`. Write `key=lambda i: i.str.lower()` |
+
 ## Rows by condition
 
 A comparison on a column gives a boolean Series. That Series is a mask. Use it inside the brackets:
@@ -170,6 +202,40 @@ print(int(calls["cell_id"].isna().sum()))
 277
 ```
 
+#### `pd.Series.isin`
+
+```text
+pd.Series.isin(
+    self,
+    values,
+)
+```
+
+The method returns a boolean Series: `True` where the value is in `values`.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `values` | required | a list, a set, a Series or an array of the values to look for | a single string raises `TypeError`. Write `["EVS"]`, not `"EVS"`. A missing value in the list matches the missing values: `isin([np.nan])` finds the 4,474 rows with no codec, but `== np.nan` never matches |
+
+#### `pd.Series.between`
+
+```text
+pd.Series.between(
+    self,
+    left,
+    right,
+    inclusive='both',
+)
+```
+
+The method returns a boolean Series: `True` where `left <= value <= right`.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `left` | required | the lower bound | — |
+| `right` | required | the upper bound | `between(120, 60)` gives no row, and no error |
+| `inclusive` | `'both'` | which bounds belong to the range: `'both'`, `'neither'`, `'left'` or `'right'` | 4,226 calls with `between(60, 120)`, and 4,179 with `inclusive="left"`. `inclusive=True` raises `ValueError` |
+
 ## Missing values in a mask
 
 A comparison with a missing value is not `True`. The rows with a missing value are not selected, and you get no message:
@@ -240,6 +306,36 @@ print(result.shape)
 ```
 
 Inside a `query` string, `and` and `or` are correct, and `@name` reads a Python variable. The cost is that an editor does not check the string, and a typo in a column name is a runtime error. Use `query` when it is shorter and clearer. Use masks when you build a condition from parts in a function.
+
+#### `pd.DataFrame.query`
+
+```text
+pd.DataFrame.query(
+    self,
+    expr,
+    *,
+    parser='pandas',
+    engine=None,
+    local_dict=None,
+    global_dict=None,
+    resolvers=None,
+    level=0,
+    inplace=False,
+)
+```
+
+The method returns the rows where the condition in the string is true.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `expr` | required | the condition as a string. `and`, `or` and `@name` work inside it | a typo in a column name raises `UndefinedVariableError` when it runs |
+| `parser` | `'pandas'` | the grammar of the string. `'pandas'` gives `&` and `|` the low priority of `and` and `or` | with `parser="python"`, `"a > 1 & b < 2"` raises `NotImplementedError`, because `&` binds first |
+| `engine` | `None` | the evaluator: `'numexpr'` or `'python'`. `None` uses `numexpr` if it is installed | `engine="numexpr"` raises `ImportError` here, because `numexpr` is not installed |
+| `local_dict` | `None` | the variables for `@name`. With `None`, the local variables of the caller | — |
+| `global_dict` | `None` | the global variables for `@name`. With `None`, the globals of the caller | — |
+| `resolvers` | `None` | more objects in which to look up names | — |
+| `level` | `0` | how many frames up the call stack to look for `@name` variables | — |
+| `inplace` | `False` | with `True`, change the table and return `None` | — |
 
 ## Set values with .loc
 
@@ -312,6 +408,20 @@ for name, n in ops_questions(load_calls()).items():
     782  started on 10 September (UTC)
 ```
 
+#### `examples.ch03_selection.ops_questions`
+
+```text
+examples.ch03_selection.ops_questions(
+    calls,
+)
+```
+
+The function returns a dict of question to count.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `calls` | required | the call records, with the types that `load_calls` gives | a `start` column of text, not timestamps, makes the last question raise `TypeError` |
+
 Read the second line. 212 calls were answered, so media flowed, and the record has no cell. This is a data-quality fact, and it needs a decision: [Chapter 5](05-missing-data.md) treats it. Read the last line. The range uses `inclusive="left"`, so a call at exactly midnight on 11 September belongs to 11 September.
 
 ## How it works
@@ -347,7 +457,7 @@ True
 slice ndarray
 ```
 
-Call 7 is at position 19,000, the late record from [Chapter 3](03-selection.md), and `loc` and `iloc` give the same row. The mask gives 351 positions, and taking them gives the same table as `df[mask]`. The last line shows three return types of `get_loc`. A unique label gives an integer.
+Call 7 is at position 19,000. It is one of the 1,000 late records at the end of the file, which [Chapter 12](12-dates-and-resampling.md) uses. `loc` and `iloc` give the same row. The mask gives 351 positions, and taking them gives the same table as `df[mask]`. The last line shows three return types of `get_loc`. A unique label gives an integer.
 
 Equal labels next to each other give a slice. Equal labels that are apart give a boolean mask. This is why a non-unique index changes the type of what `loc` returns.
 
@@ -355,62 +465,48 @@ Equal labels next to each other give a slice. Equal labels that are apart give a
 - **Failure.** A label slice on an unsorted index takes everything between the positions of its two end labels.
 - **Cost.** The hash table is built once for each index. A boolean mask costs one pass over its column.
 
-## Reference
+The three return types of `get_loc` have three costs. A unique index answers from its hash table. A sorted index with repeated labels finds the first and the last copy with a binary search, and returns a slice. An unsorted index with repeated labels cannot do either: it compares every label and returns a mask. The next block times one lookup in each kind of index of one million labels:
 
 ```python
+import timeit
+
+import numpy as np
 import pandas as pd
 
-from examples.ch03_selection import ops_questions
-from pdbook.sigs import show_signature
-
-show_signature(pd.DataFrame.query, ["expr", "inplace"])
-show_signature(pd.Series.between, ["left", "right", "inclusive"])
-show_signature(pd.Series.isin, ["values"])
-show_signature(pd.DataFrame.nlargest, ["n", "columns", "keep"])
-show_signature(pd.DataFrame.sort_index, ["axis", "ascending", "kind"])
-show_signature(ops_questions)
+rng = np.random.default_rng(0)
+n = 1_000_000
+kinds = {
+    "unique": pd.Index(rng.permutation(n)),
+    "sorted, repeated": pd.Index(np.sort(rng.integers(0, n // 2, n))),
+    "unsorted, repeated": pd.Index(rng.integers(0, n // 2, n)),
+}
+times = {}
+for name, index in kinds.items():
+    key = int(index[12345])
+    index.get_loc(key)
+    times[name] = min(timeit.repeat(lambda: index.get_loc(key), number=100, repeat=3)) / 100
+    print(f"{name:19s} {type(index.get_loc(key)).__name__:8s} {times[name] * 1e6:9.1f} us")
+assert times["unsorted, repeated"] > 50 * times["unique"]
 ```
 
 ```text
-DataFrame.query(
-    expr: 'str'
-    inplace: 'bool' = False
-)  # 7 more parameters
-Series.between(
-    left
-    right
-    inclusive: "Literal['both', 'neither', 'left', 'right']" = 'both'
-)  # 1 more parameters
-Series.isin(
-    values
-)  # 1 more parameters
-DataFrame.nlargest(
-    n: 'int'
-    columns: 'IndexLabel'
-    keep: 'NsmallestNlargestKeep' = 'first'
-)  # 1 more parameters
-DataFrame.sort_index(
-    axis: 'Axis' = 0
-    ascending: 'bool | Sequence[bool]' = True
-    kind: 'SortKind' = 'quicksort'
-)  # 7 more parameters
-ops_questions(
-    calls: pandas.DataFrame
-)
+# output varies
+unique              int            0.4 us
+sorted, repeated    slice          2.4 us
+unsorted, repeated  ndarray      478.7 us
 ```
 
-| Parameter | Default | What it does here | What goes wrong |
-|---|---|---|---|
-| `query(expr)` | required | the condition as a string; `and`, `or` and `@name` work inside | a typo in a column name is an error when it runs |
-| `query(inplace=...)` | `False` | change the table instead of returning a new one | — |
-| `between(left, right)` | required | a mask for the values in a range | — |
-| `between(inclusive=...)` | `'both'` | which ends belong to the range | 4,226 calls with `between(60, 120)`, 4,179 with `>= 60` and `< 120` |
-| `isin(values)` | required | a mask for the values that are in a list | — |
-| `nlargest(n, columns)` | required | the n rows with the largest values | — |
-| `nlargest(keep=...)` | `'first'` | which rows to keep when values tie | — |
-| `sort_index(kind=...)` | `'quicksort'` | the sort algorithm | — |
-| `sort_index(ascending=...)` | `True` | the direction | `loc[4:10]` on the unsorted index returns 6 rows, not 7 |
-| `ops_questions(calls)` | required | five counts for an operations team, as a dict | — |
+The unique index answers in less than a microsecond. The unsorted index with repeated labels reads all one million labels for each lookup. It is more than 50 times slower, and the assertion checks this. This is a reason to keep a key unique, or at least sorted, before a loop of `.loc` lookups. [Chapter 11](11-index-and-multiindex.md) measures the cost of the first lookup, which builds the table.
+
+## Reference
+
+| Callable | Introduced in | Contract |
+|---|---|---|
+| `pd.DataFrame.sort_index` | Rows by label and by position | the rows in the order of their labels; a label slice needs it |
+| `pd.Series.isin` | Rows by condition | a mask: the value is in a list |
+| `pd.Series.between` | Rows by condition | a mask: the value is in a range, both ends included by default |
+| `pd.DataFrame.query` | query | the rows where a condition in a string is true |
+| `examples.ch03_selection.ops_questions` | Build: ops_questions | five counts for an operations team, as a dict |
 
 `.loc` and `.iloc` are indexers, not functions, so they have no signature. `.loc[a:b]` includes `b`. `.iloc[a:b]` excludes it.
 

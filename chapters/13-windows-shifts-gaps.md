@@ -29,6 +29,65 @@ print(s.pct_change().round(3).tolist())
 
 The first row has no previous value, so it is `NaN`. These methods work on the position, one row up. That is only "five minutes ago" when no row is missing.
 
+#### `pd.Series.shift`
+
+```text
+pd.Series.shift(
+    self,
+    periods=1,
+    freq=None,
+    axis=0,
+    fill_value=<no_default>,
+    suffix=None,
+)
+```
+
+The method moves the values by a number of rows, or with `freq` moves the index by a time.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `periods` | `1` | the number of rows to move. A negative number moves up. A list gives one column for each value | across a gap, `shift(1)` is not 5 minutes |
+| `freq` | `None` | a time, such as `"5min"`: the labels move and the values stay with them | with `freq`, nothing becomes `NaN`. The index moves, so the result does not align with the original rows |
+| `axis` | `0` | not used for a Series | — |
+| `fill_value` | `<no_default>` | the value for the rows that the shift empties. Not set means `NaN` | without it, an `int64` Series becomes `float64` |
+| `suffix` | `None` | with a list of `periods` on a DataFrame, a text between the column name and the number: `v_lag_1` | on a Series it has no effect: the columns are `0_1`, `0_2` |
+
+#### `pd.Series.diff`
+
+```text
+pd.Series.diff(
+    self,
+    periods=1,
+)
+```
+
+The method returns each value minus the value `periods` rows before it.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `periods` | `1` | how many rows back. A negative number looks ahead | across the outage, a difference over two hours looks like one over five minutes. On booleans the result is `True` where the value changed |
+
+#### `pd.Series.pct_change`
+
+```text
+pd.Series.pct_change(
+    self,
+    periods=1,
+    fill_method=None,
+    freq=None,
+    **kwargs,
+)
+```
+
+The method returns the relative change from the value `periods` rows before: `(new - old) / old`.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `periods` | `1` | how many rows back | — |
+| `fill_method` | `None` | must be `None`. The old forward fill before the computation is gone | any other value raises `ValueError`. A gap gives `NaN` for the gap and for the row after it |
+| `freq` | `None` | compare with the value one `freq` earlier in time, not one row earlier | — |
+| `**kwargs` | — | passed to `shift` | a change from 0 gives `inf`, not an error |
+
 ## Rows are not time
 
 The KPI table has gaps. Look at the cell `BRU-004` and the time between each row and the row before it:
@@ -110,6 +169,35 @@ print(int(cell.rolling("1h").count().eq(1).sum()))
 
 With the default, no value is `NaN`, and 2 windows hold only one sample. With `min_periods=9`, which is three quarters of a full hour, 16 values are `NaN`: the windows with fewer than 9 samples. This is the same idea as the column `complete` of [Chapter 12](12-dates-and-resampling.md): a statistic needs enough data to mean something.
 
+#### `pd.Series.rolling`
+
+```text
+pd.Series.rolling(
+    self,
+    window,
+    min_periods=None,
+    center=False,
+    win_type=None,
+    on=None,
+    closed=None,
+    step=None,
+    method='single',
+)
+```
+
+The method returns a window object. Call an aggregation on it, such as `mean`, `count` or `max`.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `window` | required | a number of rows (`12`) or a time span (`"1h"`) | a window of 12 rows reached back 2 hours 55 minutes across the outage. A time window on an unsorted index raises `ValueError` |
+| `min_periods` | `None` | the samples a window needs before it gives a value. Not set means the window size for rows, and 1 for time | with a time window the default is 1 sample: 0 `NaN` values, against 16 with `min_periods=9` |
+| `center` | `False` | put the value in the middle of the window, not at its end | `center=True` uses future samples. A detector must not see the future |
+| `win_type` | `None` | weights of a SciPy window, such as `"triang"` | it needs SciPy, which this book does not install: `ImportError` |
+| `on` | `None` | for a DataFrame, a column of timestamps to use instead of the index | — |
+| `closed` | `None` | which ends of the window are inside: `'right'`, `'left'`, `'both'` or `'neither'`. Not set means `'right'` | `closed="right"` scored the spike at 16.5, `"left"` at 94.2. On a window of 12 rows, `'both'` holds 13 |
+| `step` | `None` | compute only every `step`-th window | it works only with a window of rows: with `"1h"` it raises `NotImplementedError` |
+| `method` | `'single'` | `'table'` computes over all columns at one time, with `engine="numba"` only | `'table'` on a Series raises `ValueError` |
+
 ## Expanding and exponential windows
 
 `expanding()` uses all rows from the start to the current row. `ewm` weights recent rows more:
@@ -128,6 +216,54 @@ print(s.ewm(span=3).mean().round(2).tolist())
 ```
 
 The expanding mean is a running mean, and the exponential mean follows the last value more quickly. The first is the right tool for a cumulative figure, and the second for a signal with a drift.
+
+#### `pd.Series.expanding`
+
+```text
+pd.Series.expanding(
+    self,
+    min_periods=1,
+    method='single',
+)
+```
+
+The method returns a window object that holds all rows from the start to the current row.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `min_periods` | `1` | the rows needed before the first value | — |
+| `method` | `'single'` | `'table'` works only on a DataFrame with `engine="numba"` | `'table'` on a Series raises `ValueError` |
+
+#### `pd.Series.ewm`
+
+```text
+pd.Series.ewm(
+    self,
+    com=None,
+    span=None,
+    halflife=None,
+    alpha=None,
+    min_periods=0,
+    adjust=True,
+    ignore_na=False,
+    times=None,
+    method='single',
+)
+```
+
+The method returns an exponentially weighted window. Give exactly one of `com`, `span`, `halflife` and `alpha`: they are four ways to set the decay `alpha`.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `com` | `None` | the centre of mass: `alpha = 1 / (1 + com)` | — |
+| `span` | `None` | `alpha = 2 / (span + 1)`. `span=3` is `alpha=0.5` | — |
+| `halflife` | `None` | the number of rows, or with `times` the time, after which a weight is half | — |
+| `alpha` | `None` | the decay itself, between 0 and 1 | two of the four raise `ValueError`, and none raises `ValueError` |
+| `min_periods` | `0` | the rows needed before the first value | — |
+| `adjust` | `True` | `True` divides by the sum of the weights. `False` uses the recursion `y = alpha * x + (1 - alpha) * y_previous` | the two give different values at the start: 6.47 and 6.12 for the last row of the example ([How it works](#how-it-works)) |
+| `ignore_na` | `False` | `False` counts a missing row in the distance between two values. `True` skips it | on `[1, nan, 3]` with `alpha=0.5`, the last mean is 2.6 with `False` and 2.333 with `True` |
+| `times` | `None` | the timestamps of the rows. The decay then follows time, not rows. Only with `halflife` and `mean` | with `span` it raises `ValueError`. With `halflife="5min"`, a sample after a gap of 2 hours gets almost all the weight |
+| `method` | `'single'` | `'table'` works only on a DataFrame with `engine="numba"` | — |
 
 ## The baseline must not contain the sample
 
@@ -219,6 +355,28 @@ True
 
 The first line is `True`: the result does not depend on the order of the rows, because the function sorts by time inside each cell. The second line is 0. With the threshold `z=0`, every sample above the mean is flagged. Still, no sample in the first 4 hours is flagged, because they have fewer than 50 samples of history. A detector has no opinion before it has data.
 
+#### `pdbook.spikes.flag_spikes`
+
+```text
+pdbook.spikes.flag_spikes(
+    kpi,
+    column='drop_rate_pct',
+    window='1D',
+    z=4.0,
+    min_periods=50,
+)
+```
+
+The function returns a boolean Series, aligned on the rows of `kpi`: `True` where the value is more than `z` standard deviations above its trailing mean.
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `kpi` | required | the KPI samples, with `ts` and `cell_id` | — |
+| `column` | `'drop_rate_pct'` | the column to score | — |
+| `window` | `'1D'` | the length of the trailing baseline | a window that holds fewer samples than `min_periods` never gives a score: `"1h"` holds at most 12 samples, fewer than 50, and nothing is flagged, with no warning |
+| `z` | `4.0` | the threshold, in standard deviations | `z=2` flags 174 other samples. `z=8` finds 5 of 7 |
+| `min_periods` | `50` | the samples of history that a baseline needs | — |
+
 ## How it works
 
 A rolling window by rows is a fixed number of neighbours. A rolling window by time is different. For each timestamp, pandas finds where the window begins in the sorted index, with a binary search. Then it computes the statistic over the rows from that position to the current one.
@@ -261,71 +419,46 @@ The hand computation agrees with `rolling` for four timestamps, for both setting
 - **Failure.** A window by rows spans a longer time when rows are missing ([the 2 hours 55 minutes of this chapter](#rolling-windows)).
 - **Cost.** A binary search for each row, then an incremental update of the statistic, so one pass over the data for the mean.
 
-## Reference
+An exponential mean is a weighted mean too, and its weights fall by the factor `1 - alpha` for each row back. `adjust=True`, the default, divides by the sum of the weights that exist so far. `adjust=False` is a recursion that starts at the first value. The next block computes both by hand for the four values of [Expanding and exponential windows](#expanding-and-exponential-windows) and compares them with pandas:
 
 ```python
+import numpy as np
 import pandas as pd
 
-from pdbook.sigs import show_signature
-from pdbook.spikes import flag_spikes
+s = pd.Series([1.0, 2.0, 3.0, 10.0])
+alpha = 2 / (3 + 1)
 
-show_signature(pd.Series.rolling, ["window", "min_periods", "center", "closed"])
-show_signature(pd.Series.expanding, ["min_periods"])
-show_signature(pd.Series.ewm, ["span", "alpha", "adjust"])
-show_signature(pd.Series.shift, ["periods", "freq"])
-show_signature(pd.Series.diff, ["periods"])
-show_signature(pd.Series.pct_change, ["periods"])
-show_signature(flag_spikes)
+adjusted = []
+for i in range(len(s)):
+    weights = [(1 - alpha) ** (i - j) for j in range(i + 1)]
+    adjusted.append(sum(w * s[j] for j, w in enumerate(weights)) / sum(weights))
+
+recursive = [s[0]]
+for x in s[1:]:
+    recursive.append(alpha * x + (1 - alpha) * recursive[-1])
+
+print([round(v, 2) for v in adjusted], bool(np.allclose(adjusted, s.ewm(span=3).mean())))
+print([round(v, 2) for v in recursive], bool(np.allclose(recursive, s.ewm(span=3, adjust=False).mean())))
 ```
 
 ```text
-NDFrame.rolling(
-    window: 'int | dt.timedelta | str | BaseOffset | BaseIndexer'
-    min_periods: 'int | None' = None
-    center: 'bool' = False
-    closed: 'IntervalClosedType | None' = None
-)  # 5 more parameters
-NDFrame.expanding(
-    min_periods: 'int' = 1
-)  # 2 more parameters
-NDFrame.ewm(
-    span: 'float | None' = None
-    alpha: 'float | None' = None
-    adjust: 'bool' = True
-)  # 7 more parameters
-NDFrame.shift(
-    periods: 'int | Sequence[int]' = 1
-    freq=None
-)  # 4 more parameters
-Series.diff(
-    periods: 'int' = 1
-)  # 1 more parameters
-NDFrame.pct_change(
-    periods: 'int' = 1
-)  # 4 more parameters
-flag_spikes(
-    kpi: 'pd.DataFrame'
-    column: 'str' = 'drop_rate_pct'
-    window: 'str' = '1D'
-    z: 'float' = 4.0
-    min_periods: 'int' = 50
-)
+[np.float64(1.0), np.float64(1.67), np.float64(2.43), np.float64(6.47)] True
+[np.float64(1.0), np.float64(1.5), np.float64(2.25), np.float64(6.12)] True
 ```
 
-| Parameter | Default | What it does here | What goes wrong |
-|---|---|---|---|
-| `rolling(window)` | required | rows (`12`) or time (`"1h"`) | a window of 12 rows reached back 2 hours 55 minutes across the outage |
-| `rolling(min_periods=...)` | `None` | the samples a window needs before it gives a value | with a time window the default is 1 sample: 0 `NaN` values, against 16 with `min_periods=9` |
-| `rolling(center=...)` | `False` | put the value in the middle of the window | — |
-| `rolling(closed=...)` | `None` | which ends of the window are inside; `"left"` leaves the current row out | `closed="right"` scored the spike at 16.5, `"left"` at 94.2 |
-| `expanding(min_periods=...)` | `1` | all rows from the start to now | — |
-| `ewm(span=..., alpha=...)` | `None`, `None` | a mean that weights recent rows more | — |
-| `shift(periods, freq=...)` | `1`, `None` | move values by rows, or by a time with `freq` | across a gap, `shift(1)` is not 5 minutes |
-| `diff(periods=...)` | `1` | value minus the value `periods` rows before | across the outage, a difference of two hours looks like one of five minutes |
-| `pct_change(periods=...)` | `1` | relative change | — |
-| `flag_spikes(kpi, column, window, z, min_periods)` | `'drop_rate_pct'`, `'1D'`, `4.0`, `50` | `True` where the value is more than `z` deviations above the trailing mean | `z=2` flags 174 other samples; `z=8` finds 5 of 7 |
+Both hand computations agree with pandas. `span=3` is `alpha=0.5`, so the weight halves for each row back. The two forms differ only at the start. The adjusted form gives the first value the weight that it has in a long series. The recursive form lets it count for all the past. After many rows the two are the same, because the weights of the start are close to zero.
 
-`flag_spikes` returns a boolean Series with the index of `kpi`. The input must be unique on `ts` and `cell_id`.
+## Reference
+
+| Callable | Introduced in | Contract |
+|---|---|---|
+| `pd.Series.shift` | Shift and diff | values moved by rows, or the index moved by a time |
+| `pd.Series.diff` | Shift and diff | the value minus the value some rows before |
+| `pd.Series.pct_change` | Shift and diff | the relative change from some rows before |
+| `pd.Series.rolling` | Rolling windows | a window of rows or of time; `closed` decides if the current row is in it |
+| `pd.Series.expanding` | Expanding and exponential windows | all rows from the start |
+| `pd.Series.ewm` | Expanding and exponential windows | weights that fall by `1 - alpha` for each row back |
+| `pdbook.spikes.flag_spikes` | Build: flag_spikes | `True` where a value is `z` deviations above its trailing mean |
 
 ## What you have now
 
