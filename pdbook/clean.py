@@ -35,6 +35,22 @@ def money(s: pd.Series) -> pd.Series:
     return pd.to_numeric(num.where(~missing), errors="coerce")
 
 
+DATE_FORMATS = ("%Y-%m-%d", "%d/%m/%Y", "%B %d, %Y", "%d-%b-%y")
+
+
+def dates(s: pd.Series) -> pd.Series:
+    """The four date formats of the export, each read with its exact format. Anything else becomes NaT.
+
+    One exact format for each pattern, and not `format="mixed", dayfirst=True`: with `dayfirst=True` the
+    mixed parser also swaps day and month in an ISO date such as 2024-11-04.
+    """
+    text = s.str.strip()
+    out = pd.Series(pd.NaT, index=s.index, dtype="datetime64[us]")
+    for fmt in DATE_FORMATS:
+        out = out.fillna(pd.to_datetime(text, format=fmt, errors="coerce").astype("datetime64[us]"))
+    return out
+
+
 def clean_contacts(raw: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Return (clean, rejects). `rejects` lists each value that could not be parsed."""
     df = pd.DataFrame(index=raw.index)
@@ -42,7 +58,7 @@ def clean_contacts(raw: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     df["name_key"] = name_key(raw["name"])
     df["phone"] = e164(raw["phone"])
     df["plan"] = raw["plan"].str.strip().str.lower()
-    df["signup"] = pd.to_datetime(raw["signup"].str.strip(), format="mixed", dayfirst=True, errors="coerce")
+    df["signup"] = dates(raw["signup"])
     df["balance"] = money(raw["balance"])
 
     money_marker = raw["balance"].str.strip().str.lower().isin(_MISSING_MONEY) | raw["balance"].isna()

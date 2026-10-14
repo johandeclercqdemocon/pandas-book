@@ -78,7 +78,7 @@ def assert_valid(report: pd.DataFrame) -> None:
 
 
 def plant_faults(df: pd.DataFrame, seed: int = 0) -> tuple[pd.DataFrame, dict[str, int]]:
-    """Copy `df` and break it in six ways on disjoint rows.
+    """Copy `df` and break it in seven ways on disjoint rows.
 
     Returns the copy and the number of violations that each rule of `call_rules` must report.
     The numbers are exact, so the validator is measured: it must find these and no others.
