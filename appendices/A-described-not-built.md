@@ -43,4 +43,4 @@ The data are synthetic and made by [`pdbook/datasets.py`](../pdbook/datasets.py)
 
 ## Time
 
-Timings depend on the machine and on its load. The blocks that print a time have `# output varies` above the output, and an assertion that checks an order of magnitude. The chapters quote only what the assertion proves. The values printed in the book come from one run on one machine.
+Timings depend on the machine and on its load. The blocks that print a time have `# output varies` above the output, and an assertion that checks an order of magnitude. The chapters quote only what the assertion proves. The values printed in the book come from one run on one machine. The assertions also passed on a second machine (Intel i7-8750H, Debian 13).

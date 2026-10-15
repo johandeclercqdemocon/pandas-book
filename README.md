@@ -83,7 +83,9 @@ At the last full run, the checker executed 280 Python blocks and compared 258 pr
 
 `verify_claims.py` agreed on 24 claims that it computed without pandas. The number audit lists the numbers of the prose that no output contains. Each of them is a derived value (a percentage, a difference, a unit conversion), a value that quotes a block of another chapter, or an example that was not measured. The audit is a list for a person to read. It is not a pass or a fail.
 
-What is **not** checked: statements about other versions of pandas, about packages that are not installed, and about real networks. [Appendix A](appendices/A-described-not-built.md) lists them. The timings are from one machine. Chapter 19 measures peak memory with `/proc` and works on Linux only. The data are synthetic, so the book says nothing about how often a fault occurs in real call records.
+What is **not** checked: statements about other versions of pandas, about packages that are not installed, and about real networks. [Appendix A](appendices/A-described-not-built.md) lists them. The printed timings are from one machine. Chapter 19 measures peak memory with `/proc` and works on Linux only. The data are synthetic, so the book says nothing about how often a fault occurs in real call records.
+
+The full check, with every timing assertion, also passed on a second machine (Intel i7-8750H, Debian 13). Only the SQLite version was different (chapter 20).
 
 The book also shows its own corrections. [Chapter 24](chapters/24-field-guide.md) lists the first-draft claims that the machine contradicted, with the cause of each. [Appendix C](appendices/C-what-went-wrong.md) lists the statements that later audits found wrong. Four tools exist because of them: [`scripts/audit_numbers.py`](scripts/audit_numbers.py), [`scripts/refresh_varies.py`](scripts/refresh_varies.py), [`scripts/audit_examples.py`](scripts/audit_examples.py) and the signature printer [`pdbook/sigs.py`](pdbook/sigs.py).
 
