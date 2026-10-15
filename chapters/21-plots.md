@@ -53,12 +53,7 @@ pd.Series.plot.bar(
 
 The method draws a bar for each value, at the positions 0, 1, 2 and so on, with the index labels on the ticks. It returns the matplotlib `Axes`.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `x` | `None` | for a DataFrame, the column for the x axis. With `None`, the index | on a Series it does not choose data: `x="a"` only sets the axis label to `a` |
-| `y` | `None` | for a DataFrame, the column or columns to draw. With `None`, all number columns | — |
-| `color` | `None` | one colour for all bars, or a list with one colour for each bar | — |
-| `**kwargs` | — | passed to pandas and matplotlib: `ax` to draw on an existing `Axes`, `title`, `width`, `figsize` and so on | a name that neither knows raises `AttributeError` from matplotlib, not from pandas |
+The table under `pd.Series.plot.bar` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 The functions of [`pdbook/plots.py`](../pdbook/plots.py) make their figure with `plt.subplots` and write it with `Figure.savefig`.
 
@@ -82,18 +77,7 @@ plt.subplots(
 
 The matplotlib function makes a `Figure` and a grid of `Axes`, and returns the pair `(figure, axes)`.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `nrows` | `1` | the rows of the grid | — |
-| `ncols` | `1` | the columns of the grid | — |
-| `sharex` | `False` | `True` gives all `Axes` one x axis: a zoom on one zooms all | — |
-| `sharey` | `False` | the same for the y axis. Use it when two plots must be compared by height | without it, two bars of the same height can mean different values |
-| `squeeze` | `True` | remove the axes of size 1 from the result: one `Axes`, or a 1-D array | the type of the result changes with the grid: an `Axes` for 1 by 1, a 1-D array for 1 by 3, a 2-D array for 2 by 2. `squeeze=False` always gives a 2-D array |
-| `width_ratios` | `None` | the relative widths of the columns | a list of another length than `ncols` raises `ValueError` |
-| `height_ratios` | `None` | the relative heights of the rows | — |
-| `subplot_kw` | `None` | arguments for each `Axes`, such as `{"projection": "polar"}` | — |
-| `gridspec_kw` | `None` | arguments for the grid, such as `{"wspace": 0.5}` | — |
-| `**fig_kw` | — | arguments for the `Figure`, such as `figsize=(8, 3)` in inches | — |
+The table under `plt.subplots` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 #### `plt.Figure.savefig`
 
@@ -109,11 +93,7 @@ plt.Figure.savefig(
 
 The method renders the figure and writes it to a file or a binary buffer.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `fname` | required | a path, or a file object opened in binary mode. The extension chooses the format | an extension that matplotlib does not know, such as `.xyz`, raises `ValueError`. A path with no extension gets `.png` |
-| `transparent` | `None` | `True` makes the background transparent | — |
-| `**kwargs` | — | `dpi`, `format`, `bbox_inches` and more | a higher `dpi` gives a larger file of the same figure |
+The table under `plt.Figure.savefig` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## A plot has to say what it shows
 
@@ -133,11 +113,7 @@ pdbook.plots.plot_hourly_calls(
 
 The function draws the calls for each hour of the day as bars, and returns the `Axes`.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `calls` | required | the call records, with a zoned `start` | — |
-| `tz` | `'Europe/Brussels'` | the zone of the hours. The axis label names it | the label and the conversion use the same `tz`, so they cannot disagree. With `"UTC"` the bars move by two hours |
-| `ax` | `None` | an `Axes` to draw on. With `None`, a new figure | — |
+The table under `pdbook.plots.plot_hourly_calls` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 The figure has about 100 calls an hour from 00:00 to 05:00. It rises from 06:00, and it peaks at 09:00, 15:00 and 19:00. There is a dip to about 1,000 calls at 12:00. The busiest hour is 15:00 local time with 1,441 calls, 9 more than 09:00.
 
@@ -160,10 +136,7 @@ pdbook.plots.plot_traffic_grid(
 
 The function draws the 7 by 24 grid as a heat map, and returns the `Axes`.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `grid` | required | the grid of `traffic_grid` ([Chapter 10](10-pivot-and-melt.md)) | — |
-| `ax` | `None` | an `Axes` to draw on. With `None`, a new figure | — |
+The table under `pdbook.plots.plot_traffic_grid` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 From 07:00 to 21:00 the Saturday and Sunday rows are darker than the weekday rows. The Tuesday row has the brightest cell at 09:00, the 300 calls of Chapter 10. Wednesday at 19:00 is the second brightest. All cells use one colour scale, so you can compare rows by colour.
 
@@ -186,12 +159,7 @@ pdbook.plots.plot_kpi_spike(
 
 The function draws the drop rate of one cell as a line, marks the flagged samples, and returns the `Axes`.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `kpi` | required | the KPI samples | — |
-| `flags` | required | the result of `flag_spikes` on the same `kpi` table | flags of another version of the table, for example before `drop_duplicates`, raise `KeyError`: the labels do not match |
-| `cell` | `'BRU-002'` | the cell to draw | a cell that is not in the data gives an empty plot, with no error |
-| `ax` | `None` | an `Axes` to draw on. With `None`, a new figure | — |
+The table under `pdbook.plots.plot_kpi_spike` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 The spike of 25 October is 7 samples at about 10% against a normal level of about 0.6%. The marks sit on the spike, and none is on the rest of the line.
 
@@ -212,10 +180,7 @@ pdbook.plots.plot_duration_hist(
 
 The function draws the durations of the answered calls as a histogram with 40 log-spaced bin edges on a log axis. It marks the median and returns the `Axes`.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `calls` | required | the call records | a duration of 0 has no place on a log axis. The function leaves those calls out, and the histogram counts only durations above 0 |
-| `ax` | `None` | an `Axes` to draw on. With `None`, a new figure | — |
+The table under `pdbook.plots.plot_duration_hist` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Test a plot by its data
 
@@ -337,6 +302,72 @@ The bars stand at 0, 1 and 2, next to each other, with the labels 0, 1 and 5. No
 | `pdbook.plots.plot_traffic_grid` | Heat map of a grid | the 7 by 24 grid as a heat map |
 | `pdbook.plots.plot_kpi_spike` | Mark the events that a rule found | the line of one cell with the flagged samples |
 | `pdbook.plots.plot_duration_hist` | Distributions on a log axis | the answered durations on a log axis, median marked |
+
+### Parameters
+
+##### `pd.Series.plot.bar`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `x` | `None` | for a DataFrame, the column for the x axis. With `None`, the index | on a Series it does not choose data: `x="a"` only sets the axis label to `a` |
+| `y` | `None` | for a DataFrame, the column or columns to draw. With `None`, all number columns | — |
+| `color` | `None` | one colour for all bars, or a list with one colour for each bar | — |
+| `**kwargs` | — | passed to pandas and matplotlib: `ax` to draw on an existing `Axes`, `title`, `width`, `figsize` and so on | a name that neither knows raises `AttributeError` from matplotlib, not from pandas |
+
+##### `plt.subplots`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `nrows` | `1` | the rows of the grid | — |
+| `ncols` | `1` | the columns of the grid | — |
+| `sharex` | `False` | `True` gives all `Axes` one x axis: a zoom on one zooms all | — |
+| `sharey` | `False` | the same for the y axis. Use it when two plots must be compared by height | without it, two bars of the same height can mean different values |
+| `squeeze` | `True` | remove the axes of size 1 from the result: one `Axes`, or a 1-D array | the type of the result changes with the grid: an `Axes` for 1 by 1, a 1-D array for 1 by 3, a 2-D array for 2 by 2. `squeeze=False` always gives a 2-D array |
+| `width_ratios` | `None` | the relative widths of the columns | a list of another length than `ncols` raises `ValueError` |
+| `height_ratios` | `None` | the relative heights of the rows | — |
+| `subplot_kw` | `None` | arguments for each `Axes`, such as `{"projection": "polar"}` | — |
+| `gridspec_kw` | `None` | arguments for the grid, such as `{"wspace": 0.5}` | — |
+| `**fig_kw` | — | arguments for the `Figure`, such as `figsize=(8, 3)` in inches | — |
+
+##### `plt.Figure.savefig`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `fname` | required | a path, or a file object opened in binary mode. The extension chooses the format | an extension that matplotlib does not know, such as `.xyz`, raises `ValueError`. A path with no extension gets `.png` |
+| `transparent` | `None` | `True` makes the background transparent | — |
+| `**kwargs` | — | `dpi`, `format`, `bbox_inches` and more | a higher `dpi` gives a larger file of the same figure |
+
+##### `pdbook.plots.plot_hourly_calls`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `calls` | required | the call records, with a zoned `start` | — |
+| `tz` | `'Europe/Brussels'` | the zone of the hours. The axis label names it | the label and the conversion use the same `tz`, so they cannot disagree. With `"UTC"` the bars move by two hours |
+| `ax` | `None` | an `Axes` to draw on. With `None`, a new figure | — |
+
+##### `pdbook.plots.plot_traffic_grid`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `grid` | required | the grid of `traffic_grid` ([Chapter 10](10-pivot-and-melt.md)) | — |
+| `ax` | `None` | an `Axes` to draw on. With `None`, a new figure | — |
+
+##### `pdbook.plots.plot_kpi_spike`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `kpi` | required | the KPI samples | — |
+| `flags` | required | the result of `flag_spikes` on the same `kpi` table | flags of another version of the table, for example before `drop_duplicates`, raise `KeyError`: the labels do not match |
+| `cell` | `'BRU-002'` | the cell to draw | a cell that is not in the data gives an empty plot, with no error |
+| `ax` | `None` | an `Axes` to draw on. With `None`, a new figure | — |
+
+##### `pdbook.plots.plot_duration_hist`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `calls` | required | the call records | a duration of 0 has no place on a log axis. The function leaves those calls out, and the histogram counts only durations above 0 |
+| `ax` | `None` | an `Axes` to draw on. With `None`, a new figure | — |
+
 
 ## What you have now
 

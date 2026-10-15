@@ -62,10 +62,7 @@ pdbook.validate.check_schema(
 
 The function returns a list of problems with the column names and dtypes. An empty list means that the schema is as expected.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `df` | required | the table to check | — |
-| `expected` | `{'call_id': 'int64', 'start': 'datetime64[us, UTC]', 'caller': 'str', 'callee': 'str', 'duration_s': 'float64', 'status': 'str', 'cell_id': 'str', 'codec': 'str', 'roaming': 'bool'}` | a dict of column name to dtype, as text. The default is the schema of the call records | a dtype is compared as text: `datetime64[us, UTC]` and `datetime64[ns, UTC]` are different schemas |
+The table under `pdbook.validate.check_schema` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Rules as data
 
@@ -114,11 +111,7 @@ pdbook.validate.Rule(
 
 The class is a dataclass: one rule as a name, a function and a severity.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `name` | required | the sentence that the report shows | — |
-| `violated` | required | a function of the table that returns a boolean Series: `True` on each row that breaks the rule | a range rule such as `d < 0` does not fire on a null ([How it works](#how-it-works)) |
-| `severity` | `'error'` | `'error'` stops the job in `assert_valid`. `'warn'` is reported only | — |
+The table under `pdbook.validate.Rule` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 #### `pdbook.validate.call_rules`
 
@@ -133,12 +126,7 @@ pdbook.validate.call_rules(
 
 The function returns the 10 rules for the call records, as a list of `Rule`.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `subs` | required | the subscribers, for the rule "caller is a known subscriber" | — |
-| `cells` | required | the cells, for the rule "cell is known when it is present" | — |
-| `first` | `'2026-08-31 22:00'` | the first allowed `start`, in UTC: midnight of 1 September in Brussels | — |
-| `last` | `'2026-09-30 22:00'` | the end of the allowed range, in UTC | the default bounds are for September 2026. A file of October breaks the rule "start is inside the month" on every row |
+The table under `pdbook.validate.call_rules` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 #### `pdbook.validate.validate`
 
@@ -151,10 +139,7 @@ pdbook.validate.validate(
 
 The function returns one row for each rule: `rule`, `severity`, `violations`, `share` and `first_rows`, the first three row labels.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `df` | required | the table to check. It never changes | — |
-| `rules` | required | a list of `Rule` | — |
+The table under `pdbook.validate.validate` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Measure the validator
 
@@ -202,10 +187,7 @@ pdbook.validate.plant_faults(
 
 The function returns a broken copy of `df` and a dict: the exact number of violations that each rule must report.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `df` | required | the call records. It does not change | — |
-| `seed` | `0` | the seed for the choice of the rows | — (the counts are the same for every seed: 7, 5, 11, 4, 3, 4, 2. Only the rows change) |
+The table under `pdbook.validate.plant_faults` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 The last line shows the rules that no fault was planted for: `status`, `cell is known` and the warning. They find 0, 0 and 277, the same as on the clean data. A validator that is exact on 7 rules, and gives the clean-data result on the other 3, is what you want.
 
@@ -256,9 +238,7 @@ pdbook.validate.assert_valid(
 
 The function returns nothing when no rule of severity `error` has a violation. Otherwise it raises `ValueError` with each failing rule and its count.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `report` | required | the result of `validate` | a `warn` rule never stops the job, however many rows break it |
+The table under `pdbook.validate.assert_valid` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Compare tables in tests
 
@@ -317,25 +297,7 @@ pd.testing.assert_frame_equal(
 
 The function returns nothing when the two tables are equal, and raises `AssertionError` with the first difference when they are not.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `left` | required | the table that the code made | — |
-| `right` | required | the expected table | — |
-| `check_dtype` | `True` | compare the dtypes | `False` makes `int64` and `float64` with the same values equal |
-| `check_index_type` | `'equiv'` | compare the class of the index. `'equiv'` treats a `RangeIndex` and an `Index` of integers as the same | `True` makes them different |
-| `check_column_type` | `'equiv'` | the same for the column labels | — |
-| `check_frame_type` | `True` | compare the class of the two objects | a subclass of `DataFrame` raises an `AssertionError` with no message |
-| `check_names` | `True` | compare the `names` of the index and the columns | an index named `a` differs from one with no name |
-| `by_blocks` | `False` | compare the internal blocks, not the columns | — |
-| `check_exact` | `<no_default>` | `True` compares floats exactly. Not set means exact for integers and tolerant for floats | — |
-| `check_datetimelike_compat` | `False` | compare timestamps of different types by value | any value warns with `Pandas4Warning`: it goes away in pandas 4 |
-| `check_categorical` | `True` | compare categories exactly, their order included | the same values with the categories in another order are different |
-| `check_like` | `False` | ignore the order of rows and columns: match them by label | `False` fails on a reordered table. With `True`, the labels must still carry the same values |
-| `check_freq` | `True` | compare the `freq` of a `DatetimeIndex` | the message is only `(<Day>, None)` |
-| `check_flags` | `True` | compare the `flags`, such as `allows_duplicate_labels` | — |
-| `rtol` | `<no_default>` | the relative tolerance for floats. Not set means `1e-5` | `rtol=0` alone still accepts a difference of 1e-9, because `atol` does. The rule is not the one of `np.isclose` ([How it works](#how-it-works)) |
-| `atol` | `<no_default>` | the absolute tolerance for floats. Not set means `1e-8` | with `check_exact=True`, `rtol` and `atol` are not used |
-| `obj` | `'DataFrame'` | the name in the error message | — |
+The table under `pd.testing.assert_frame_equal` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Where to put it
 
@@ -439,6 +401,75 @@ the same two numbers in the other order. A test that compares with `np.isclose` 
 | `pdbook.validate.plant_faults` | Measure the validator | a broken copy and the exact count each rule must find |
 | `pdbook.validate.assert_valid` | Stop the job | `ValueError` when an `error` rule has violations |
 | `pd.testing.assert_frame_equal` | Compare tables in tests | `AssertionError` at the first difference; floats within a tolerance |
+
+### Parameters
+
+##### `pdbook.validate.check_schema`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `df` | required | the table to check | — |
+| `expected` | `{'call_id': 'int64', 'start': 'datetime64[us, UTC]', 'caller': 'str', 'callee': 'str', 'duration_s': 'float64', 'status': 'str', 'cell_id': 'str', 'codec': 'str', 'roaming': 'bool'}` | a dict of column name to dtype, as text. The default is the schema of the call records | a dtype is compared as text: `datetime64[us, UTC]` and `datetime64[ns, UTC]` are different schemas |
+
+##### `pdbook.validate.Rule`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `name` | required | the sentence that the report shows | — |
+| `violated` | required | a function of the table that returns a boolean Series: `True` on each row that breaks the rule | a range rule such as `d < 0` does not fire on a null ([How it works](#how-it-works)) |
+| `severity` | `'error'` | `'error'` stops the job in `assert_valid`. `'warn'` is reported only | — |
+
+##### `pdbook.validate.call_rules`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `subs` | required | the subscribers, for the rule "caller is a known subscriber" | — |
+| `cells` | required | the cells, for the rule "cell is known when it is present" | — |
+| `first` | `'2026-08-31 22:00'` | the first allowed `start`, in UTC: midnight of 1 September in Brussels | — |
+| `last` | `'2026-09-30 22:00'` | the end of the allowed range, in UTC | the default bounds are for September 2026. A file of October breaks the rule "start is inside the month" on every row |
+
+##### `pdbook.validate.validate`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `df` | required | the table to check. It never changes | — |
+| `rules` | required | a list of `Rule` | — |
+
+##### `pdbook.validate.plant_faults`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `df` | required | the call records. It does not change | — |
+| `seed` | `0` | the seed for the choice of the rows | — (the counts are the same for every seed: 7, 5, 11, 4, 3, 4, 2. Only the rows change) |
+
+##### `pdbook.validate.assert_valid`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `report` | required | the result of `validate` | a `warn` rule never stops the job, however many rows break it |
+
+##### `pd.testing.assert_frame_equal`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `left` | required | the table that the code made | — |
+| `right` | required | the expected table | — |
+| `check_dtype` | `True` | compare the dtypes | `False` makes `int64` and `float64` with the same values equal |
+| `check_index_type` | `'equiv'` | compare the class of the index. `'equiv'` treats a `RangeIndex` and an `Index` of integers as the same | `True` makes them different |
+| `check_column_type` | `'equiv'` | the same for the column labels | — |
+| `check_frame_type` | `True` | compare the class of the two objects | a subclass of `DataFrame` raises an `AssertionError` with no message |
+| `check_names` | `True` | compare the `names` of the index and the columns | an index named `a` differs from one with no name |
+| `by_blocks` | `False` | compare the internal blocks, not the columns | — |
+| `check_exact` | `<no_default>` | `True` compares floats exactly. Not set means exact for integers and tolerant for floats | — |
+| `check_datetimelike_compat` | `False` | compare timestamps of different types by value | any value warns with `Pandas4Warning`: it goes away in pandas 4 |
+| `check_categorical` | `True` | compare categories exactly, their order included | the same values with the categories in another order are different |
+| `check_like` | `False` | ignore the order of rows and columns: match them by label | `False` fails on a reordered table. With `True`, the labels must still carry the same values |
+| `check_freq` | `True` | compare the `freq` of a `DatetimeIndex` | the message is only `(<Day>, None)` |
+| `check_flags` | `True` | compare the `flags`, such as `allows_duplicate_labels` | — |
+| `rtol` | `<no_default>` | the relative tolerance for floats. Not set means `1e-5` | `rtol=0` alone still accepts a difference of 1e-9, because `atol` does. The rule is not the one of `np.isclose` ([How it works](#how-it-works)) |
+| `atol` | `<no_default>` | the absolute tolerance for floats. Not set means `1e-8` | with `check_exact=True`, `rtol` and `atol` are not used |
+| `obj` | `'DataFrame'` | the name in the error message | — |
+
 
 ## What you have now
 

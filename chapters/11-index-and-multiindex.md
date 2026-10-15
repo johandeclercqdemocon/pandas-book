@@ -64,13 +64,7 @@ pd.DataFrame.set_index(
 
 The method returns the table with one or more columns, or arrays, as the index.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `keys` | required | a column name, a list of names, or an array or `Index` of the same length | a name that is not a column raises `KeyError`. A repeated label is accepted: the pair `(caller, start)` has one repeated label |
-| `drop` | `True` | remove the column after it moves into the index | — |
-| `append` | `False` | `True` keeps the old index and adds the new key as a second level | with `True`, the old `RangeIndex` stays as the first level |
-| `inplace` | `False` | with `True`, change the table and return `None` | — |
-| `verify_integrity` | `<no_default>` | `True` raises `ValueError` for a repeated label | any value warns with `Pandas4Warning`: the parameter goes away in pandas 4. Use `index.is_unique` |
+The table under `pd.DataFrame.set_index` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 #### `pd.DataFrame.reset_index`
 
@@ -90,15 +84,7 @@ pd.DataFrame.reset_index(
 
 The method moves the index, or some levels of it, back into columns, and gives the table a new `RangeIndex`.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `level` | `None` | the levels to move. With `None`, all of them | — |
-| `drop` | `False` | `True` throws the old index away | `False` adds it back as a column. An index with no name becomes a column called `index` |
-| `inplace` | `False` | with `True`, change the table and return `None` | — |
-| `col_level` | `0` | for columns with several levels: the level that gets the name | — |
-| `col_fill` | `''` | for columns with several levels: the label of the other levels. `None` repeats the name | — |
-| `allow_duplicates` | `<no_default>` | `True` allows a column name that already exists | the name of an existing column raises `ValueError`: `cannot insert k, already exists` |
-| `names` | `None` | new names for the columns that the index becomes | — |
+The table under `pd.DataFrame.reset_index` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 Lookup by label is fast. A boolean mask scans the whole column for each lookup:
 
@@ -200,18 +186,7 @@ pd.DataFrame.reindex(
 
 The method returns the rows, or the columns, for exactly the labels that you give, in that order.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `labels` | `None` | the new labels for the axis that `axis` names | — |
-| `index` | `None` | the new row labels | a label that is not there gives a row of `NaN`, and an `int64` column becomes `float64`. `loc` raises `KeyError` |
-| `columns` | `None` | the new column labels | a name that is not there gives a column of `NaN` |
-| `axis` | `None` | the axis for `labels`: `0` or `'index'`, `1` or `'columns'` | — |
-| `method` | `None` | how to fill a new label: `'ffill'`, `'bfill'` or `'nearest'` from the labels around it | on an unsorted index it gives `NaN` and no error. `get_indexer` raises in the same case |
-| `copy` | `<no_default>` | ignored since pandas 3.0 | any value warns with `Pandas4Warning` |
-| `level` | `None` | for a MultiIndex, the level that the labels match | — |
-| `fill_value` | `nan` | the value for a new label. `fill_value=0` keeps an integer column as integers | — |
-| `limit` | `None` | the largest number of new labels in a row that `method` fills | — |
-| `tolerance` | `None` | the largest distance between a new label and the label that fills it | — |
+The table under `pd.DataFrame.reindex` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 An index with a repeated label cannot be reindexed: it raises `ValueError`, because one label must then give several rows.
 
@@ -249,12 +224,7 @@ pd.Series.add(
 
 The method is the operator `+` with options. `sub`, `mul` and `div` have the same parameters.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `other` | required | a Series, a number, or a list of the same length | a list of another length raises `ValueError`. A list does not align: it goes by position |
-| `level` | `None` | for a MultiIndex, the level on which to match the labels of `other` | — |
-| `fill_value` | `None` | the value for a label that one side does not have, before the add | it also replaces a `NaN` that is already in one side: at a label where `a` holds `NaN` and `b` holds 10, the result is 10. A label that both sides lack stays `NaN` |
-| `axis` | `0` | not used for a Series. A Series has only axis 0, and `axis=1` raises `ValueError` | — |
+The table under `pd.Series.add` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## MultiIndex: several levels
 
@@ -315,12 +285,7 @@ pd.DataFrame.xs(
 
 The method returns the rows for one value of one index level, a cross-section.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `key` | required | the value to select, or a tuple of values for several levels | a value that is not in the level raises `KeyError` |
-| `axis` | `0` | `0` selects rows, `1` selects columns | — |
-| `level` | `None` | the level of `key`, by name or number. With `None`, the first levels | — |
-| `drop_level` | `True` | remove the selected level from the result | with `True`, the result does not say which value you selected. `drop_level=False` keeps it |
+The table under `pd.DataFrame.xs` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Sorted or not
 
@@ -395,9 +360,7 @@ pdbook.indexcheck.index_audit(
 
 The function returns a dict with seven facts about the index of `df`: `levels`, `names`, `dtype`, `unique`, `sorted`, `duplicate_labels` and `has_missing`.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `df` | required | any DataFrame or Series with an index | — |
+The table under `pdbook.indexcheck.index_audit` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## How it works
 
@@ -460,9 +423,7 @@ pd.Index.get_loc(
 
 The method returns the position of one label: an integer, a slice or a boolean mask.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `key` | required | the label | a label that is not there raises `KeyError`. A repeated label returns a slice or a mask, not an integer ([Chapter 3](03-selection.md)) |
+The table under `pd.Index.get_loc` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 - **Invariant.** A lookup in a unique index is one hash probe, after a build that happens once.
 - **Failure.** A non-unique index returns a slice or a mask, and a code that expects one row gets several.
@@ -516,6 +477,76 @@ The sum is exact. The 600 callers cost 7,875 bytes once, and each row costs only
 | `pd.DataFrame.xs` | MultiIndex: several levels | the rows for one value of one level |
 | `pdbook.indexcheck.index_audit` | Build: index_audit | seven facts about an index, as a dict |
 | `pd.Index.get_loc` | How it works | the position of one label: an integer, a slice or a mask |
+
+### Parameters
+
+##### `pd.DataFrame.set_index`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `keys` | required | a column name, a list of names, or an array or `Index` of the same length | a name that is not a column raises `KeyError`. A repeated label is accepted: the pair `(caller, start)` has one repeated label |
+| `drop` | `True` | remove the column after it moves into the index | — |
+| `append` | `False` | `True` keeps the old index and adds the new key as a second level | with `True`, the old `RangeIndex` stays as the first level |
+| `inplace` | `False` | with `True`, change the table and return `None` | — |
+| `verify_integrity` | `<no_default>` | `True` raises `ValueError` for a repeated label | any value warns with `Pandas4Warning`: the parameter goes away in pandas 4. Use `index.is_unique` |
+
+##### `pd.DataFrame.reset_index`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `level` | `None` | the levels to move. With `None`, all of them | — |
+| `drop` | `False` | `True` throws the old index away | `False` adds it back as a column. An index with no name becomes a column called `index` |
+| `inplace` | `False` | with `True`, change the table and return `None` | — |
+| `col_level` | `0` | for columns with several levels: the level that gets the name | — |
+| `col_fill` | `''` | for columns with several levels: the label of the other levels. `None` repeats the name | — |
+| `allow_duplicates` | `<no_default>` | `True` allows a column name that already exists | the name of an existing column raises `ValueError`: `cannot insert k, already exists` |
+| `names` | `None` | new names for the columns that the index becomes | — |
+
+##### `pd.DataFrame.reindex`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `labels` | `None` | the new labels for the axis that `axis` names | — |
+| `index` | `None` | the new row labels | a label that is not there gives a row of `NaN`, and an `int64` column becomes `float64`. `loc` raises `KeyError` |
+| `columns` | `None` | the new column labels | a name that is not there gives a column of `NaN` |
+| `axis` | `None` | the axis for `labels`: `0` or `'index'`, `1` or `'columns'` | — |
+| `method` | `None` | how to fill a new label: `'ffill'`, `'bfill'` or `'nearest'` from the labels around it | on an unsorted index it gives `NaN` and no error. `get_indexer` raises in the same case |
+| `copy` | `<no_default>` | ignored since pandas 3.0 | any value warns with `Pandas4Warning` |
+| `level` | `None` | for a MultiIndex, the level that the labels match | — |
+| `fill_value` | `nan` | the value for a new label. `fill_value=0` keeps an integer column as integers | — |
+| `limit` | `None` | the largest number of new labels in a row that `method` fills | — |
+| `tolerance` | `None` | the largest distance between a new label and the label that fills it | — |
+
+##### `pd.Series.add`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `other` | required | a Series, a number, or a list of the same length | a list of another length raises `ValueError`. A list does not align: it goes by position |
+| `level` | `None` | for a MultiIndex, the level on which to match the labels of `other` | — |
+| `fill_value` | `None` | the value for a label that one side does not have, before the add | it also replaces a `NaN` that is already in one side: at a label where `a` holds `NaN` and `b` holds 10, the result is 10. A label that both sides lack stays `NaN` |
+| `axis` | `0` | not used for a Series. A Series has only axis 0, and `axis=1` raises `ValueError` | — |
+
+##### `pd.DataFrame.xs`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `key` | required | the value to select, or a tuple of values for several levels | a value that is not in the level raises `KeyError` |
+| `axis` | `0` | `0` selects rows, `1` selects columns | — |
+| `level` | `None` | the level of `key`, by name or number. With `None`, the first levels | — |
+| `drop_level` | `True` | remove the selected level from the result | with `True`, the result does not say which value you selected. `drop_level=False` keeps it |
+
+##### `pdbook.indexcheck.index_audit`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `df` | required | any DataFrame or Series with an index | — |
+
+##### `pd.Index.get_loc`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `key` | required | the label | a label that is not there raises `KeyError`. A repeated label returns a slice or a mask, not an integer ([Chapter 3](03-selection.md)) |
+
 
 ## What you have now
 

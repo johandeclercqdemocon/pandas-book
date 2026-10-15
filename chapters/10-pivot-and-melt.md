@@ -98,19 +98,7 @@ pd.DataFrame.pivot_table(
 
 The method groups the rows by the row keys and the column keys, aggregates each group, and spreads the result as a table.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `values` | `None` | the column or columns to aggregate. With `None`, every other column | with `None`, the result gets one block of columns for each value column, under a second level of column labels |
-| `index` | `None` | the key or keys of the rows | — |
-| `columns` | `None` | the key or keys of the columns | — |
-| `aggfunc` | `'mean'` | how to combine the rows of one cell: a name, a function, a list, or a dict of column to function | a duplicate row is added in silence: 16 repeated rows give a total of 20,016 and not 20,000 ([How it works](#how-it-works)) |
-| `fill_value` | `None` | the value for a cell with no rows | — |
-| `margins` | `False` | `True` adds a row and a column with the aggregate of all rows | with `aggfunc="mean"` the margin is the mean of all rows, not the mean of the cells |
-| `dropna` | `True` | drop a column whose cells are all `NaN`, and drop the rows with a missing key | the status `failed` disappears from a table of mean durations |
-| `margins_name` | `'All'` | the label of the margin row and column | — |
-| `observed` | `True` | for a `category` key, show only the categories that occur | a category with no rows has no row: 4 rows for 5 categories |
-| `sort` | `True` | sort the keys | — |
-| `**kwargs` | — | more keyword arguments for `aggfunc`, such as `q=0.9` for `"quantile"` | — |
+The table under `pd.DataFrame.pivot_table` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## crosstab: counts and shares
 
@@ -156,18 +144,7 @@ pd.crosstab(
 
 The function counts the rows for each pair of values of two Series, or aggregates a third Series with `aggfunc`.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `index` | required | the values for the rows: a Series, an array, or a list of them | — |
-| `columns` | required | the values for the columns | — |
-| `values` | `None` | a Series to aggregate, instead of a count | `values` without `aggfunc` raises `ValueError` |
-| `rownames` | `None` | names for the row keys | — |
-| `colnames` | `None` | names for the column keys | — |
-| `aggfunc` | `None` | how to aggregate `values`, such as `"mean"` | — |
-| `margins` | `False` | add a row and a column `All` with the totals | — |
-| `margins_name` | `'All'` | the label of the margin row and column | — |
-| `dropna` | `True` | drop the rows with a missing key, and the columns that are all `NaN` | the 277 calls without a cell are not counted: 19,723 against 20,000 with `dropna=False` |
-| `normalize` | `False` | `'columns'` divides each column by its sum, `'index'` each row, `True` or `'all'` the whole table | — |
+The table under `pd.crosstab` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## pivot: reshape without aggregating
 
@@ -207,11 +184,7 @@ pd.DataFrame.pivot(
 
 The method reshapes the table with no aggregation: each pair of row key and column key must occur once.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `columns` | required | the column whose values become the column labels | — |
-| `index` | `<no_default>` | the column whose values become the row labels. Not set means the existing index | a pair that occurs twice raises `ValueError` |
-| `values` | `<no_default>` | the column or columns that fill the cells. Not set means every other column | not set gives two levels of column labels: one block for each value column |
+The table under `pd.DataFrame.pivot` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## melt: wide to long
 
@@ -270,14 +243,7 @@ pd.DataFrame.melt(
 
 The method stacks columns into two: one with the old column names and one with the values.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `id_vars` | `None` | the columns that stay as they are | — |
-| `value_vars` | `None` | the columns to stack. With `None`, every column that is not in `id_vars` | — |
-| `var_name` | `None` | the name of the column of old column names. With `None`, the name of the column labels, or `variable` | `hour` comes back as `object`. Convert it |
-| `value_name` | `'value'` | the name of the column of values | the name of an existing column raises `ValueError` |
-| `col_level` | `None` | for columns with several levels, the level to use | — |
-| `ignore_index` | `True` | `True` makes a new `RangeIndex`. `False` repeats the old labels | with `False`, the labels repeat: 0, 1, 0, 1 |
+The table under `pd.DataFrame.melt` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## stack and unstack
 
@@ -319,11 +285,7 @@ pd.Series.unstack(
 
 The method moves one level of a MultiIndex into the columns, and returns a table. `stack` is the reverse.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `level` | `-1` | the level to move, by number or name. `-1` is the last level | — |
-| `fill_value` | `None` | the value for a pair that does not occur | without it, a pair that does not occur is `NaN`, and an integer table becomes `float64` |
-| `sort` | `True` | sort the new column labels | — |
+The table under `pd.Series.unstack` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Build: the traffic grid
 
@@ -372,10 +334,7 @@ pdbook.traffic.traffic_grid(
 
 The function returns a table of 7 rows, Monday to Sunday, and 24 columns, one for each local hour, with the number of calls.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `calls` | required | the call records, with a `start` that has a time zone | a `start` with no zone raises `TypeError` |
-| `tz` | `'Europe/Brussels'` | the zone of the hours | the grid in UTC differs in 164 of 168 cells |
+The table under `pdbook.traffic.traffic_grid` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 #### `pdbook.traffic.to_long`
 
@@ -387,9 +346,7 @@ pdbook.traffic.to_long(
 
 The function returns one row for each weekday and hour, with the hour as an integer.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `grid` | required | a grid from `traffic_grid` | — |
+The table under `pdbook.traffic.to_long` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 #### `pdbook.traffic.to_wide`
 
@@ -401,9 +358,7 @@ pdbook.traffic.to_wide(
 
 The function returns the grid again, from the long form.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `long` | required | the long form from `to_long` | a repeated row raises `ValueError` |
+The table under `pdbook.traffic.to_wide` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## How it works
 
@@ -481,6 +436,86 @@ pivot: ValueError: Index contains duplicate entries, cannot reshape
 | `pdbook.traffic.traffic_grid` | Build: the traffic grid | the 7 by 24 table of calls in local time |
 | `pdbook.traffic.to_long` | Build: the traffic grid | the grid as one row for each weekday and hour |
 | `pdbook.traffic.to_wide` | Build: the traffic grid | the long form back to the grid |
+
+### Parameters
+
+##### `pd.DataFrame.pivot_table`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `values` | `None` | the column or columns to aggregate. With `None`, every other column | with `None`, the result gets one block of columns for each value column, under a second level of column labels |
+| `index` | `None` | the key or keys of the rows | — |
+| `columns` | `None` | the key or keys of the columns | — |
+| `aggfunc` | `'mean'` | how to combine the rows of one cell: a name, a function, a list, or a dict of column to function | a duplicate row is added in silence: 16 repeated rows give a total of 20,016 and not 20,000 ([How it works](#how-it-works)) |
+| `fill_value` | `None` | the value for a cell with no rows | — |
+| `margins` | `False` | `True` adds a row and a column with the aggregate of all rows | with `aggfunc="mean"` the margin is the mean of all rows, not the mean of the cells |
+| `dropna` | `True` | drop a column whose cells are all `NaN`, and drop the rows with a missing key | the status `failed` disappears from a table of mean durations |
+| `margins_name` | `'All'` | the label of the margin row and column | — |
+| `observed` | `True` | for a `category` key, show only the categories that occur | a category with no rows has no row: 4 rows for 5 categories |
+| `sort` | `True` | sort the keys | — |
+| `**kwargs` | — | more keyword arguments for `aggfunc`, such as `q=0.9` for `"quantile"` | — |
+
+##### `pd.crosstab`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `index` | required | the values for the rows: a Series, an array, or a list of them | — |
+| `columns` | required | the values for the columns | — |
+| `values` | `None` | a Series to aggregate, instead of a count | `values` without `aggfunc` raises `ValueError` |
+| `rownames` | `None` | names for the row keys | — |
+| `colnames` | `None` | names for the column keys | — |
+| `aggfunc` | `None` | how to aggregate `values`, such as `"mean"` | — |
+| `margins` | `False` | add a row and a column `All` with the totals | — |
+| `margins_name` | `'All'` | the label of the margin row and column | — |
+| `dropna` | `True` | drop the rows with a missing key, and the columns that are all `NaN` | the 277 calls without a cell are not counted: 19,723 against 20,000 with `dropna=False` |
+| `normalize` | `False` | `'columns'` divides each column by its sum, `'index'` each row, `True` or `'all'` the whole table | — |
+
+##### `pd.DataFrame.pivot`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `columns` | required | the column whose values become the column labels | — |
+| `index` | `<no_default>` | the column whose values become the row labels. Not set means the existing index | a pair that occurs twice raises `ValueError` |
+| `values` | `<no_default>` | the column or columns that fill the cells. Not set means every other column | not set gives two levels of column labels: one block for each value column |
+
+##### `pd.DataFrame.melt`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `id_vars` | `None` | the columns that stay as they are | — |
+| `value_vars` | `None` | the columns to stack. With `None`, every column that is not in `id_vars` | — |
+| `var_name` | `None` | the name of the column of old column names. With `None`, the name of the column labels, or `variable` | `hour` comes back as `object`. Convert it |
+| `value_name` | `'value'` | the name of the column of values | the name of an existing column raises `ValueError` |
+| `col_level` | `None` | for columns with several levels, the level to use | — |
+| `ignore_index` | `True` | `True` makes a new `RangeIndex`. `False` repeats the old labels | with `False`, the labels repeat: 0, 1, 0, 1 |
+
+##### `pd.Series.unstack`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `level` | `-1` | the level to move, by number or name. `-1` is the last level | — |
+| `fill_value` | `None` | the value for a pair that does not occur | without it, a pair that does not occur is `NaN`, and an integer table becomes `float64` |
+| `sort` | `True` | sort the new column labels | — |
+
+##### `pdbook.traffic.traffic_grid`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `calls` | required | the call records, with a `start` that has a time zone | a `start` with no zone raises `TypeError` |
+| `tz` | `'Europe/Brussels'` | the zone of the hours | the grid in UTC differs in 164 of 168 cells |
+
+##### `pdbook.traffic.to_long`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `grid` | required | a grid from `traffic_grid` | — |
+
+##### `pdbook.traffic.to_wide`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `long` | required | the long form from `to_long` | a repeated row raises `ValueError` |
+
 
 ## What you have now
 

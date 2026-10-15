@@ -58,11 +58,7 @@ pdbook.features.past_features(
 
 The function returns one row for each subscriber id: `calls`, `answered_share`, `talk_min`, `active_days` and `days_since_last`, from the calls before the cutoff only.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `calls` | required | the call records, with a zoned `start` | — |
-| `subscribers` | required | the subscriber ids, as a Series. Each id gets a row | an id with no past call gets `calls` 0 and `NaN` for `answered_share` and `days_since_last` |
-| `cutoff` | required | the cutoff as text, such as `"2026-09-22"`. It is local midnight in `Europe/Brussels` | a `Timestamp` that already has a zone raises `ValueError`. A UTC midnight would put the calls from 22:00 to 24:00 on the wrong side: 8 calls |
+The table under `pdbook.features.past_features` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 #### `pdbook.features.target`
 
@@ -76,11 +72,7 @@ pdbook.features.target(
 
 The function returns, for each subscriber id, the number of calls at or after the cutoff.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `calls` | required | the call records | — |
-| `subscribers` | required | the subscriber ids | an id with no future call gets 0, not `NaN` |
-| `cutoff` | required | the same cutoff as for `past_features` | a different cutoff for the target and the features leaks or loses days, with no error |
+The table under `pdbook.features.target` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## The easy feature leaks
 
@@ -128,10 +120,7 @@ pdbook.features.leaky_features(
 
 The function returns the count of calls of each subscriber over the whole table. It is the easy version, and it leaks the target.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `calls` | required | the call records | it has no cutoff, so it reads the future: it fails `assert_no_leak` |
-| `subscribers` | required | the subscriber ids | — |
+The table under `pdbook.features.leaky_features` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Test for the leak
 
@@ -177,12 +166,7 @@ pdbook.features.assert_no_leak(
 
 The function returns nothing when `feature_fn(calls, subscribers)` gives the same table after each of two changes to the future. Otherwise it raises `AssertionError` and names the change.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `feature_fn` | required | a function of `(calls, subscribers)` that returns the features | — |
-| `calls` | required | the call records | — |
-| `subscribers` | required | the subscriber ids | — |
-| `cutoff` | required | the cutoff that defines the future for the test | the test trusts this cutoff. A feature with a cutoff of 22 September passes a test with a cutoff of 25 September, although it is wrong for that later date. A feature with a cutoff of 25 September fails a test at 22 September, as it must |
+The table under `pdbook.features.assert_no_leak` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Compare two configurations
 
@@ -223,9 +207,7 @@ pdbook.evals.load_runs(
 
 The function returns one row for each task, configuration and seed. The nested `tokens` object becomes the columns `tokens.prompt` and `tokens.completion`, with `json_normalize` ([Chapter 22](22-json-and-nested-records.md)).
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `path` | `None` | the JSON-lines file. With `None`, `data/runs.jsonl` | — |
+The table under `pdbook.evals.load_runs` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 A claim that one configuration is better needs an interval. `compare_configs` resamples the *tasks* with replacement 2,000 times, and takes the mean difference of each resample:
 
@@ -278,13 +260,7 @@ pdbook.evals.compare_configs(
 
 The function returns a dict: `tasks`, `rate_a`, `rate_b`, `diff` (b minus a), `paired_se`, `unpaired_se`, `ci_low`, `ci_high`, `tasks_better` and `tasks_worse`.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `runs` | required | the runs of `load_runs` | — |
-| `a` | `'baseline'` | the configuration to compare against | a name that is not in `runs` raises `KeyError`. Swap `a` and `b`, and the difference changes sign |
-| `b` | `'improved'` | the configuration to test | — |
-| `n_boot` | `2000` | the number of bootstrap resamples | with 50, the lower end went from 0.006 to 0.020 over the seeds 0 to 5. With 2000, it went from 0.002 to 0.004 over the seeds 0 to 2 |
-| `seed` | `0` | the seed of the resampling | — |
+The table under `pdbook.evals.compare_configs` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Build: the results as a table
 
@@ -403,6 +379,57 @@ Three copies of one result carry no more information than one. The interval stil
 | `pdbook.evals.compare_configs` | Compare two configurations | rates, the paired difference, and a bootstrap interval over tasks |
 | `pd.json_normalize` | Compare two configurations ([Chapter 22](22-json-and-nested-records.md) has the block) | nested dicts as columns |
 | `pd.DataFrame.groupby` | Compare two configurations ([Chapter 8](08-group-by.md) has the block) | groups of rows by keys |
+
+### Parameters
+
+##### `pdbook.features.past_features`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `calls` | required | the call records, with a zoned `start` | — |
+| `subscribers` | required | the subscriber ids, as a Series. Each id gets a row | an id with no past call gets `calls` 0 and `NaN` for `answered_share` and `days_since_last` |
+| `cutoff` | required | the cutoff as text, such as `"2026-09-22"`. It is local midnight in `Europe/Brussels` | a `Timestamp` that already has a zone raises `ValueError`. A UTC midnight would put the calls from 22:00 to 24:00 on the wrong side: 8 calls |
+
+##### `pdbook.features.target`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `calls` | required | the call records | — |
+| `subscribers` | required | the subscriber ids | an id with no future call gets 0, not `NaN` |
+| `cutoff` | required | the same cutoff as for `past_features` | a different cutoff for the target and the features leaks or loses days, with no error |
+
+##### `pdbook.features.leaky_features`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `calls` | required | the call records | it has no cutoff, so it reads the future: it fails `assert_no_leak` |
+| `subscribers` | required | the subscriber ids | — |
+
+##### `pdbook.features.assert_no_leak`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `feature_fn` | required | a function of `(calls, subscribers)` that returns the features | — |
+| `calls` | required | the call records | — |
+| `subscribers` | required | the subscriber ids | — |
+| `cutoff` | required | the cutoff that defines the future for the test | the test trusts this cutoff. A feature with a cutoff of 22 September passes a test with a cutoff of 25 September, although it is wrong for that later date. A feature with a cutoff of 25 September fails a test at 22 September, as it must |
+
+##### `pdbook.evals.load_runs`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `path` | `None` | the JSON-lines file. With `None`, `data/runs.jsonl` | — |
+
+##### `pdbook.evals.compare_configs`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `runs` | required | the runs of `load_runs` | — |
+| `a` | `'baseline'` | the configuration to compare against | a name that is not in `runs` raises `KeyError`. Swap `a` and `b`, and the difference changes sign |
+| `b` | `'improved'` | the configuration to test | — |
+| `n_boot` | `2000` | the number of bootstrap resamples | with 50, the lower end went from 0.006 to 0.020 over the seeds 0 to 5. With 2000, it went from 0.002 to 0.004 over the seeds 0 to 2 |
+| `seed` | `0` | the seed of the resampling | — |
+
 
 ## What you have now
 

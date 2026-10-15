@@ -51,9 +51,7 @@ pd.Series.dt.tz_convert(
 
 The method shows each aware timestamp in another zone. The instant does not change.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `tz` | required | the zone, such as `"Europe/Brussels"` or `"UTC"`. `None` converts to UTC and removes the zone | on a naive column it raises `TypeError`: use `tz_localize` first. — (the stored integers do not change) |
+The table under `pd.Series.dt.tz_convert` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 The accessor `dt` gives the parts: `dt.hour`, `dt.dayofweek`, `dt.date`, `dt.floor("h")`, `dt.strftime(...)`. The parts depend on the zone of the column. Convert first.
 
@@ -101,11 +99,7 @@ pd.Series.dt.tz_localize(
 
 The method attaches a zone to each naive timestamp. The reading stays, and the instant is the reading in that zone.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `tz` | required | the zone of the readings. `None` removes the zone and keeps the local reading | on an aware column it raises `TypeError`: use `tz_convert`. The reading is a different instant in each zone |
-| `ambiguous` | `'raise'` | what to do with a reading that happens twice: `'raise'`, `'infer'` from the order of the rows, `'NaT'`, `True` for summer time, `False` for winter time, or an array of booleans, one for each row | `2026-10-25 02:30` raises. `True` on a column applies to every row, so two different calls at "02:30" both get `+02:00`. Use `'infer'` or an array |
-| `nonexistent` | `'raise'` | what to do with a reading that never happens: `'raise'`, `'shift_forward'`, `'shift_backward'`, `'NaT'` or a `Timedelta` | `2027-03-28 02:30` raises. `'shift_forward'` gives 03:00, and `pd.Timedelta("1h")` gives 03:30: two different answers to the same question |
+The table under `pd.Series.dt.tz_localize` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## A day with 25 hours
 
@@ -145,18 +139,7 @@ pd.date_range(
 
 The function returns a `DatetimeIndex` of regular timestamps. Give exactly three of `start`, `end`, `periods` and `freq`.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `start` | `None` | the first timestamp | — |
-| `end` | `None` | the last timestamp | all four of `start`, `end`, `periods` and `freq` raise `ValueError` |
-| `periods` | `None` | the number of timestamps | — |
-| `freq` | `None` | the step: `"h"`, `"5min"`, `"D"`, `"MS"` for the start of a month, `"ME"` for the end. With `None` and no `periods`, one day | `"M"` raises `ValueError` in pandas 3.0: write `"ME"`. On a zone with summer time, `"D"` steps from local midnight to local midnight, and `"24h"` steps 24 hours: on 25 October the second gives 23:00 |
-| `tz` | `None` | the zone of the timestamps. With `None`, naive | with `tz="Europe/Brussels"` the day of 25 October has 25 hours |
-| `normalize` | `False` | set `start` and `end` to midnight first | — |
-| `name` | `None` | the name of the index | — |
-| `inclusive` | `'both'` | which ends are in the range: `'both'`, `'neither'`, `'left'` or `'right'` | — |
-| `unit` | `None` | the resolution, such as `"s"` or `"us"`. With `None`, the resolution of the inputs | — |
-| `**kwargs` | — | accepted and passed on. pandas 3.0 knows no extra name here | an old name such as `closed=` raises `TypeError` |
+The table under `pd.date_range` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## A DatetimeIndex
 
@@ -198,12 +181,7 @@ pd.DataFrame.between_time(
 
 The method returns the rows whose clock time is between two times, on any date.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `start_time` | required | the first clock time, such as `"08:00"` | — |
-| `end_time` | required | the last clock time. A time before `start_time` crosses midnight: `"23:00"` to `"01:00"` is two hours | — |
-| `inclusive` | `'both'` | which ends are in: `'both'`, `'neither'`, `'left'` or `'right'` | `"08:00"` to `"09:00"` with `'both'` takes the sample at 09:00 of each day: 39 samples and not 36 |
-| `axis` | `None` | `0` for the index, `1` for the columns | on a table without a `DatetimeIndex` it raises `TypeError` |
+The table under `pd.DataFrame.between_time` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 The clock time is read in the zone of the index. The same call on the series in Brussels time gives 35 samples, because the three UTC days are not the three local days.
 
@@ -282,17 +260,7 @@ pd.DataFrame.resample(
 
 The method groups the rows into time bins by the `DatetimeIndex`, or by the column `on`. Call an aggregation on the result.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `rule` | required | the size of the bins: `"5min"`, `"h"`, `"D"`, `"W"`, `"MS"` and so on | empty bins stay: 720 hours, 4 with no call. A table without a `DatetimeIndex` and without `on` raises `TypeError` |
-| `closed` | `None` | which end of a bin is inside it: `'left'` or `'right'`. `None` means `'left'`, except for `"W"`, `"ME"`, `"QE"` and `"YE"` | with `"W"`, the default is `'right'`: the bins end on Sunday and carry the label of that Sunday. The first bin of this month is 6 September, not 30 August |
-| `label` | `None` | which end of a bin names it. The same defaults as `closed` | — |
-| `convention` | `'start'` | for a `PeriodIndex` only: put the value at the start or the end of the new period | — |
-| `on` | `None` | a column of timestamps to use instead of the index | — |
-| `level` | `None` | for a MultiIndex, the level of timestamps | — |
-| `origin` | `'start_day'` | the point from which the bins are counted: `'start_day'` is midnight of the first day, `'epoch'` is 1970-01-01 | for bins that do not divide a day, such as `"7h"`, the bins differ: the first starts at 21:00 with `'start_day'` and at 16:00 with `'epoch'` |
-| `offset` | `None` | a shift of the origin, such as `"6h"` | with `"D"`, it has no effect and gives a `RuntimeWarning`. A day of 06:00 to 06:00 needs `"24h"` |
-| `group_keys` | `False` | for `apply` on the result: add the bin labels as an index level | — |
+The table under `pd.DataFrame.resample` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Build: hourly_kpi
 
@@ -341,11 +309,7 @@ pdbook.kpi.hourly_kpi(
 
 The function returns one row for each cell and local hour: the mean load, the number of samples `n`, and `complete`.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `kpi` | required | the KPI samples, with `ts`, `cell_id` and `prb_util_pct` | — (5,104 rows, 25 repeats, 432 hours, 354 complete) |
-| `tz` | `'Europe/Brussels'` | the zone of the hours | — |
-| `full_hour` | `12` | the number of samples that makes an hour complete | `full_hour=11` makes 425 hours complete instead of 354: the threshold decides what the dashboard calls good |
+The table under `pdbook.kpi.hourly_kpi` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## How it works
 
@@ -428,6 +392,69 @@ the bins in Brussels time are the bins in UTC, the same instants with the same c
 | `pd.DataFrame.between_time` | A DatetimeIndex | the rows between two clock times, in the zone of the index |
 | `pd.DataFrame.resample` | resample | time bins on the index; empty bins stay |
 | `pdbook.kpi.hourly_kpi` | Build: hourly_kpi | one row for each cell and local hour, with `n` and `complete` |
+
+### Parameters
+
+##### `pd.Series.dt.tz_convert`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `tz` | required | the zone, such as `"Europe/Brussels"` or `"UTC"`. `None` converts to UTC and removes the zone | on a naive column it raises `TypeError`: use `tz_localize` first. — (the stored integers do not change) |
+
+##### `pd.Series.dt.tz_localize`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `tz` | required | the zone of the readings. `None` removes the zone and keeps the local reading | on an aware column it raises `TypeError`: use `tz_convert`. The reading is a different instant in each zone |
+| `ambiguous` | `'raise'` | what to do with a reading that happens twice: `'raise'`, `'infer'` from the order of the rows, `'NaT'`, `True` for summer time, `False` for winter time, or an array of booleans, one for each row | `2026-10-25 02:30` raises. `True` on a column applies to every row, so two different calls at "02:30" both get `+02:00`. Use `'infer'` or an array |
+| `nonexistent` | `'raise'` | what to do with a reading that never happens: `'raise'`, `'shift_forward'`, `'shift_backward'`, `'NaT'` or a `Timedelta` | `2027-03-28 02:30` raises. `'shift_forward'` gives 03:00, and `pd.Timedelta("1h")` gives 03:30: two different answers to the same question |
+
+##### `pd.date_range`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `start` | `None` | the first timestamp | — |
+| `end` | `None` | the last timestamp | all four of `start`, `end`, `periods` and `freq` raise `ValueError` |
+| `periods` | `None` | the number of timestamps | — |
+| `freq` | `None` | the step: `"h"`, `"5min"`, `"D"`, `"MS"` for the start of a month, `"ME"` for the end. With `None` and no `periods`, one day | `"M"` raises `ValueError` in pandas 3.0: write `"ME"`. On a zone with summer time, `"D"` steps from local midnight to local midnight, and `"24h"` steps 24 hours: on 25 October the second gives 23:00 |
+| `tz` | `None` | the zone of the timestamps. With `None`, naive | with `tz="Europe/Brussels"` the day of 25 October has 25 hours |
+| `normalize` | `False` | set `start` and `end` to midnight first | — |
+| `name` | `None` | the name of the index | — |
+| `inclusive` | `'both'` | which ends are in the range: `'both'`, `'neither'`, `'left'` or `'right'` | — |
+| `unit` | `None` | the resolution, such as `"s"` or `"us"`. With `None`, the resolution of the inputs | — |
+| `**kwargs` | — | accepted and passed on. pandas 3.0 knows no extra name here | an old name such as `closed=` raises `TypeError` |
+
+##### `pd.DataFrame.between_time`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `start_time` | required | the first clock time, such as `"08:00"` | — |
+| `end_time` | required | the last clock time. A time before `start_time` crosses midnight: `"23:00"` to `"01:00"` is two hours | — |
+| `inclusive` | `'both'` | which ends are in: `'both'`, `'neither'`, `'left'` or `'right'` | `"08:00"` to `"09:00"` with `'both'` takes the sample at 09:00 of each day: 39 samples and not 36 |
+| `axis` | `None` | `0` for the index, `1` for the columns | on a table without a `DatetimeIndex` it raises `TypeError` |
+
+##### `pd.DataFrame.resample`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `rule` | required | the size of the bins: `"5min"`, `"h"`, `"D"`, `"W"`, `"MS"` and so on | empty bins stay: 720 hours, 4 with no call. A table without a `DatetimeIndex` and without `on` raises `TypeError` |
+| `closed` | `None` | which end of a bin is inside it: `'left'` or `'right'`. `None` means `'left'`, except for `"W"`, `"ME"`, `"QE"` and `"YE"` | with `"W"`, the default is `'right'`: the bins end on Sunday and carry the label of that Sunday. The first bin of this month is 6 September, not 30 August |
+| `label` | `None` | which end of a bin names it. The same defaults as `closed` | — |
+| `convention` | `'start'` | for a `PeriodIndex` only: put the value at the start or the end of the new period | — |
+| `on` | `None` | a column of timestamps to use instead of the index | — |
+| `level` | `None` | for a MultiIndex, the level of timestamps | — |
+| `origin` | `'start_day'` | the point from which the bins are counted: `'start_day'` is midnight of the first day, `'epoch'` is 1970-01-01 | for bins that do not divide a day, such as `"7h"`, the bins differ: the first starts at 21:00 with `'start_day'` and at 16:00 with `'epoch'` |
+| `offset` | `None` | a shift of the origin, such as `"6h"` | with `"D"`, it has no effect and gives a `RuntimeWarning`. A day of 06:00 to 06:00 needs `"24h"` |
+| `group_keys` | `False` | for `apply` on the result: add the bin labels as an index level | — |
+
+##### `pdbook.kpi.hourly_kpi`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `kpi` | required | the KPI samples, with `ts`, `cell_id` and `prb_util_pct` | — (5,104 rows, 25 repeats, 432 hours, 354 complete) |
+| `tz` | `'Europe/Brussels'` | the zone of the hours | — |
+| `full_hour` | `12` | the number of samples that makes an hour complete | `full_hour=11` makes 425 hours complete instead of 354: the threshold decides what the dashboard calls good |
+
 
 ## What you have now
 

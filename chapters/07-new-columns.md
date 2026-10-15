@@ -44,9 +44,7 @@ pd.DataFrame.assign(
 
 The method returns a new table with the new or changed columns. The table that you call it on does not change.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `**kwargs` | — | one keyword for each column: `name=value`. A value can be a constant, a Series, an array or a function of the table. The functions run in order, so `c=lambda d: d["b"] + 1` can use a `b` made one keyword earlier | a Series aligns on the index: a Series with the labels 1 and 2 on a table with the labels 0 and 1 gives `NaN` in row 0. A name with a space needs `**{"my col": ...}` |
+The table under `pd.DataFrame.assign` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## The index decides where values go
 
@@ -141,13 +139,7 @@ pd.Series.where(
 
 The method keeps each value where `cond` is `True` and replaces it where `cond` is `False`.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `cond` | required | a boolean Series, an array of the same length, or a function of the Series | a Series with other labels aligns: a label that `cond` does not have counts as `False`. A list of the wrong length raises `ValueError` |
-| `other` | `<no_default>` | the value for the rows where `cond` is `False`: a value, a Series or a function. Not set means `NaN` | without `other`, an `int64` Series becomes `float64`, because it must hold `NaN`. `where(d > 0)` makes 4,474 values `NaN` |
-| `inplace` | `False` | with `True`, change the Series and return `None` | — |
-| `axis` | `None` | for a DataFrame, the axis on which to align `cond` and `other`. Not used for a Series | — |
-| `level` | `None` | for a MultiIndex, the level on which to align | — |
+The table under `pd.Series.where` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 #### `pd.Series.mask`
 
@@ -165,13 +157,7 @@ pd.Series.mask(
 
 The method is the opposite of `where`: it replaces each value where `cond` is `True`.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `cond` | required | the rows to replace | the same alignment as `where` |
-| `other` | `<no_default>` | the new value. Not set means `NaN` | the same upcast to `float64` as `where` |
-| `inplace` | `False` | with `True`, change the Series and return `None` | — |
-| `axis` | `None` | for a DataFrame, the axis on which to align | — |
-| `level` | `None` | for a MultiIndex, the level on which to align | — |
+The table under `pd.Series.mask` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 #### `np.select`
 
@@ -185,11 +171,7 @@ np.select(
 
 The NumPy function returns an array with, for each row, the choice of the first condition that is true.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `condlist` | required | a list of boolean arrays or Series | `isna` must come first, because `NaN < 30` is `False` and the null would fall through to `default` |
-| `choicelist` | required | a list of values or arrays, one for each condition | a list of another length raises `ValueError` |
-| `default` | `0` | the value where no condition is true | with text choices, the default `0` raises `TypeError` on NumPy 2.5: give a text `default`. The result is a NumPy array, not a Series, and it has no index |
+The table under `np.select` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 #### `pd.cut`
 
@@ -209,17 +191,7 @@ pd.cut(
 
 The function puts each number in an interval and returns a category.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `x` | required | the numbers, one-dimensional | a value outside all the bins becomes `NaN`, with no message |
-| `bins` | required | the edges of the intervals, or a number of intervals of equal width | edges `[0, 5, 10]` exclude 0: `(0, 5]` does not hold it, and 0 becomes `NaN` |
-| `right` | `True` | `True` gives intervals `(a, b]`, `False` gives `[a, b)` | — |
-| `labels` | `None` | the names of the intervals, one fewer than the edges. `False` gives the interval number | a list of the wrong length raises `ValueError` |
-| `retbins` | `False` | `True` also returns the edges. Use it when `bins` is a number | the result is a tuple, not a Series |
-| `precision` | `3` | the number of digits in the names of the intervals | the names are rounded and the bins are not. With `bins=[0.1216, 1.0556]` and `precision=1`, the interval is named `(0.1, 1.1]`, and 1.08 still becomes `NaN` |
-| `include_lowest` | `False` | with `True`, the first interval holds its left edge | without it, the smallest edge is outside every interval |
-| `duplicates` | `'raise'` | `'raise'` or `'drop'` for repeated edges | edges `[0, 5, 5, 10]` raise `ValueError`. `'drop'` makes two intervals |
-| `ordered` | `True` | the category is ordered. `False` allows a label twice | `ordered=False` without `labels` raises `ValueError` |
+The table under `pd.cut` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 #### `pd.Series.map`
 
@@ -235,12 +207,7 @@ pd.Series.map(
 
 The method returns a new Series with each value replaced through a dict, a Series or a function.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `func` | `None` | a dict, a Series or a function of one value | a key not in the dict gives `NaN`: 1,033 for `failed`. A `defaultdict` gives its default instead |
-| `na_action` | `None` | `'ignore'` passes a missing value through and does not call the function on it | without it, the function receives `NaN`: `lambda v: v.upper()` raises `AttributeError` |
-| `engine` | `None` | a compiler for the function, such as Numba. `None` runs Python | with a dict, any `engine` raises `ValueError` |
-| `**kwargs` | — | more keyword arguments for the function | — |
+The table under `pd.Series.map` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## The three speeds
 
@@ -339,11 +306,7 @@ pdbook.rating.rate_vector(
 
 The function returns the cost of each call in euros, from whole columns.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `calls` | required | the call records | — |
-| `subs` | required | the subscribers, with `subscriber_id` and `plan` | a caller that is not in `subs` gets the cost `NaN`, and the sum of the bill skips it with no message. Check `isna().sum()` |
-| `plans` | required | the plans, with `plan` and `rate_per_min_eur` | — |
+The table under `pdbook.rating.rate_vector` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 #### `pdbook.rating.rate_apply`
 
@@ -357,11 +320,7 @@ pdbook.rating.rate_apply(
 
 The function returns the same bill with `apply(axis=1)`: one Python call for each row.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `calls` | required | the call records | — |
-| `subs` | required | the subscribers | a caller that is not in `subs` raises `KeyError` |
-| `plans` | required | the plans | — |
+The table under `pdbook.rating.rate_apply` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 #### `pdbook.rating.rate_loop`
 
@@ -375,11 +334,7 @@ pdbook.rating.rate_loop(
 
 The function returns the same bill with a loop over `iterrows`.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `calls` | required | the call records | — |
-| `subs` | required | the subscribers | a caller that is not in `subs` raises `KeyError` |
-| `plans` | required | the plans | — |
+The table under `pdbook.rating.rate_loop` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Why the loop is slow
 
@@ -430,17 +385,7 @@ pd.DataFrame.apply(
 
 The method calls `func` on each column, or with `axis=1` on each row, and combines the results.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `func` | required | a function of a Series, a name such as `"sum"`, or a list of them | — |
-| `axis` | `0` | `0` calls `func` on each column, `1` on each row | `axis=1` calls `func` 20,000 times, more than 10 times slower than the column form (asserted) |
-| `raw` | `False` | `True` passes a NumPy array, not a Series, to `func` | with `True`, `func` cannot use names such as `row["a"]` |
-| `result_type` | `None` | for `axis=1`: `'expand'` turns a list result into columns, `'reduce'` keeps one value, `'broadcast'` keeps the shape | without it, a list result stays a list in each cell |
-| `args` | `()` | more positional arguments for `func` | — |
-| `by_row` | `'compat'` | only for a list or dict of functions: `False` passes the whole column | — |
-| `engine` | `None` | a compiler, such as Numba. `None` runs Python | `engine="numba"` raises `ImportError` here |
-| `engine_kwargs` | `None` | options for the engine | — |
-| `**kwargs` | — | more keyword arguments for `func` | — |
+The table under `pd.DataFrame.apply` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 A row from `apply(axis=1)` is one Series, and a Series has one dtype. A row of the call records has the dtype `object`. A row with an `int64` and a `float64` column makes the integer a float. The function receives other types than the columns have.
 
@@ -562,6 +507,104 @@ The chain and `np.select` agree on all 20,000 rows. The first condition is the l
 | `pdbook.rating.rate_vector` | The three speeds | the bill from whole columns |
 | `pdbook.rating.rate_apply` | The three speeds | the same bill with `apply(axis=1)` |
 | `pdbook.rating.rate_loop` | The three speeds | the same bill with `iterrows` |
+
+### Parameters
+
+##### `pd.DataFrame.assign`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `**kwargs` | — | one keyword for each column: `name=value`. A value can be a constant, a Series, an array or a function of the table. The functions run in order, so `c=lambda d: d["b"] + 1` can use a `b` made one keyword earlier | a Series aligns on the index: a Series with the labels 1 and 2 on a table with the labels 0 and 1 gives `NaN` in row 0. A name with a space needs `**{"my col": ...}` |
+
+##### `pd.Series.where`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `cond` | required | a boolean Series, an array of the same length, or a function of the Series | a Series with other labels aligns: a label that `cond` does not have counts as `False`. A list of the wrong length raises `ValueError` |
+| `other` | `<no_default>` | the value for the rows where `cond` is `False`: a value, a Series or a function. Not set means `NaN` | without `other`, an `int64` Series becomes `float64`, because it must hold `NaN`. `where(d > 0)` makes 4,474 values `NaN` |
+| `inplace` | `False` | with `True`, change the Series and return `None` | — |
+| `axis` | `None` | for a DataFrame, the axis on which to align `cond` and `other`. Not used for a Series | — |
+| `level` | `None` | for a MultiIndex, the level on which to align | — |
+
+##### `pd.Series.mask`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `cond` | required | the rows to replace | the same alignment as `where` |
+| `other` | `<no_default>` | the new value. Not set means `NaN` | the same upcast to `float64` as `where` |
+| `inplace` | `False` | with `True`, change the Series and return `None` | — |
+| `axis` | `None` | for a DataFrame, the axis on which to align | — |
+| `level` | `None` | for a MultiIndex, the level on which to align | — |
+
+##### `np.select`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `condlist` | required | a list of boolean arrays or Series | `isna` must come first, because `NaN < 30` is `False` and the null would fall through to `default` |
+| `choicelist` | required | a list of values or arrays, one for each condition | a list of another length raises `ValueError` |
+| `default` | `0` | the value where no condition is true | with text choices, the default `0` raises `TypeError` on NumPy 2.5: give a text `default`. The result is a NumPy array, not a Series, and it has no index |
+
+##### `pd.cut`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `x` | required | the numbers, one-dimensional | a value outside all the bins becomes `NaN`, with no message |
+| `bins` | required | the edges of the intervals, or a number of intervals of equal width | edges `[0, 5, 10]` exclude 0: `(0, 5]` does not hold it, and 0 becomes `NaN` |
+| `right` | `True` | `True` gives intervals `(a, b]`, `False` gives `[a, b)` | — |
+| `labels` | `None` | the names of the intervals, one fewer than the edges. `False` gives the interval number | a list of the wrong length raises `ValueError` |
+| `retbins` | `False` | `True` also returns the edges. Use it when `bins` is a number | the result is a tuple, not a Series |
+| `precision` | `3` | the number of digits in the names of the intervals | the names are rounded and the bins are not. With `bins=[0.1216, 1.0556]` and `precision=1`, the interval is named `(0.1, 1.1]`, and 1.08 still becomes `NaN` |
+| `include_lowest` | `False` | with `True`, the first interval holds its left edge | without it, the smallest edge is outside every interval |
+| `duplicates` | `'raise'` | `'raise'` or `'drop'` for repeated edges | edges `[0, 5, 5, 10]` raise `ValueError`. `'drop'` makes two intervals |
+| `ordered` | `True` | the category is ordered. `False` allows a label twice | `ordered=False` without `labels` raises `ValueError` |
+
+##### `pd.Series.map`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `func` | `None` | a dict, a Series or a function of one value | a key not in the dict gives `NaN`: 1,033 for `failed`. A `defaultdict` gives its default instead |
+| `na_action` | `None` | `'ignore'` passes a missing value through and does not call the function on it | without it, the function receives `NaN`: `lambda v: v.upper()` raises `AttributeError` |
+| `engine` | `None` | a compiler for the function, such as Numba. `None` runs Python | with a dict, any `engine` raises `ValueError` |
+| `**kwargs` | — | more keyword arguments for the function | — |
+
+##### `pdbook.rating.rate_vector`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `calls` | required | the call records | — |
+| `subs` | required | the subscribers, with `subscriber_id` and `plan` | a caller that is not in `subs` gets the cost `NaN`, and the sum of the bill skips it with no message. Check `isna().sum()` |
+| `plans` | required | the plans, with `plan` and `rate_per_min_eur` | — |
+
+##### `pdbook.rating.rate_apply`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `calls` | required | the call records | — |
+| `subs` | required | the subscribers | a caller that is not in `subs` raises `KeyError` |
+| `plans` | required | the plans | — |
+
+##### `pdbook.rating.rate_loop`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `calls` | required | the call records | — |
+| `subs` | required | the subscribers | a caller that is not in `subs` raises `KeyError` |
+| `plans` | required | the plans | — |
+
+##### `pd.DataFrame.apply`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `func` | required | a function of a Series, a name such as `"sum"`, or a list of them | — |
+| `axis` | `0` | `0` calls `func` on each column, `1` on each row | `axis=1` calls `func` 20,000 times, more than 10 times slower than the column form (asserted) |
+| `raw` | `False` | `True` passes a NumPy array, not a Series, to `func` | with `True`, `func` cannot use names such as `row["a"]` |
+| `result_type` | `None` | for `axis=1`: `'expand'` turns a list result into columns, `'reduce'` keeps one value, `'broadcast'` keeps the shape | without it, a list result stays a list in each cell |
+| `args` | `()` | more positional arguments for `func` | — |
+| `by_row` | `'compat'` | only for a list or dict of functions: `False` passes the whole column | — |
+| `engine` | `None` | a compiler, such as Numba. `None` runs Python | `engine="numba"` raises `ImportError` here |
+| `engine_kwargs` | `None` | options for the engine | — |
+| `**kwargs` | — | more keyword arguments for `func` | — |
+
 
 ## What you have now
 

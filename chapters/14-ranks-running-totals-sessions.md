@@ -48,14 +48,7 @@ pd.Series.rank(
 
 The method returns the rank of each value, as `float64`. The DataFrame method ranks each column.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `axis` | `0` | not used for a Series. For a DataFrame, `1` ranks along each row | `axis=1` on a Series raises `ValueError` |
-| `method` | `'average'` | the rule for ties: `'average'`, `'min'`, `'max'`, `'dense'` or `'first'` | for the values 10, 20, 20, 30 the two 20s get 2.5 (`average`), 2 and 2 (`min`), 3 and 3 (`max`), 2 and 2 (`dense`), 2 and 3 (`first`) |
-| `numeric_only` | `False` | for a DataFrame, rank only the number columns | without it, a text column is ranked in alphabetical order |
-| `na_option` | `'keep'` | `'keep'` gives a missing value the rank `NaN`. `'top'` ranks it first, `'bottom'` last | with `'top'`, the missing value is rank 1 and every other rank moves up by one |
-| `ascending` | `True` | `False` gives rank 1 to the largest | — |
-| `pct` | `False` | ranks as a share of 1: the rank divided by the number of values | with `method="dense"`, the share divides by the number of distinct values, not of rows |
+The table under `pd.Series.rank` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Top n in each group
 
@@ -102,9 +95,7 @@ pd.core.groupby.DataFrameGroupBy.head(
 
 The method returns the first `n` rows of each group, in the order of the table. `tail` returns the last ones.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `n` | `5` | the number of rows to keep from each group. A negative number keeps all but the last `-n` | the rows are the first ones in the table, not the largest: sort before. `head(-1)` keeps 19,400 rows, all but the last call of each of the 600 callers |
+The table under `pd.core.groupby.DataFrameGroupBy.head` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 For the top rows of the whole table, without groups, `nlargest` is one call. It sorts only as much as it needs:
 
@@ -146,11 +137,7 @@ pd.DataFrame.nlargest(
 
 The method returns the `n` rows with the largest values in `columns`, in descending order. `nsmallest` is the opposite.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `n` | required | the number of rows | a column with fewer real values than `n` adds the `NaN` rows at the end |
-| `columns` | required | the column, or a list of columns: the second breaks the ties of the first | a text column raises `TypeError` |
-| `keep` | `'first'` | which rows to keep when values tie at the cut: `'first'`, `'last'` or `'all'` | `'all'` can return more than `n` rows |
+The table under `pd.DataFrame.nlargest` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Running totals
 
@@ -189,9 +176,7 @@ pd.core.groupby.DataFrameGroupBy.cumcount(
 
 The method numbers the rows of each group from 0, in the order of the table.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `ascending` | `True` | `True` counts from the first row of the group, `False` from the last | it needs a sorted table to mean "so far in time" |
+The table under `pd.core.groupby.DataFrameGroupBy.cumcount` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Time since the previous event
 
@@ -319,10 +304,7 @@ pdbook.sessions.sessionize(
 
 The function returns a copy of `calls` with two new columns: `session` (1, 2, … for each caller) and `session_id` (such as `S0001-001`).
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `calls` | required | the call records, in any order | — |
-| `gap` | `'30min'` | the largest gap inside a session, as text for `pd.Timedelta`. A gap of exactly `gap` stays in the session | text that is not a time raises `ValueError`. The same code without a sort gives 18,151 sessions against 18,420 ([How it works](#how-it-works)) |
+The table under `pdbook.sessions.sessionize` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 #### `pdbook.sessions.session_table`
 
@@ -334,9 +316,7 @@ pdbook.sessions.session_table(
 
 The function returns one row for each session: `session_id`, `caller`, `first_start`, `last_start`, `calls` and `talk_s`.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `sessions` | required | the result of `sessionize` | — |
+The table under `pdbook.sessions.session_table` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## How it works
 
@@ -418,6 +398,53 @@ A negative gap is never larger than 30 minutes, so the late call joins a session
 | `pd.core.groupby.DataFrameGroupBy.cumcount` | Running totals | the position of each row in its group, from 0 |
 | `pdbook.sessions.sessionize` | Build: sessionize | a session number for each call; sorts inside |
 | `pdbook.sessions.session_table` | Build: sessionize | one row for each session |
+
+### Parameters
+
+##### `pd.Series.rank`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `axis` | `0` | not used for a Series. For a DataFrame, `1` ranks along each row | `axis=1` on a Series raises `ValueError` |
+| `method` | `'average'` | the rule for ties: `'average'`, `'min'`, `'max'`, `'dense'` or `'first'` | for the values 10, 20, 20, 30 the two 20s get 2.5 (`average`), 2 and 2 (`min`), 3 and 3 (`max`), 2 and 2 (`dense`), 2 and 3 (`first`) |
+| `numeric_only` | `False` | for a DataFrame, rank only the number columns | without it, a text column is ranked in alphabetical order |
+| `na_option` | `'keep'` | `'keep'` gives a missing value the rank `NaN`. `'top'` ranks it first, `'bottom'` last | with `'top'`, the missing value is rank 1 and every other rank moves up by one |
+| `ascending` | `True` | `False` gives rank 1 to the largest | — |
+| `pct` | `False` | ranks as a share of 1: the rank divided by the number of values | with `method="dense"`, the share divides by the number of distinct values, not of rows |
+
+##### `pd.core.groupby.DataFrameGroupBy.head`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `n` | `5` | the number of rows to keep from each group. A negative number keeps all but the last `-n` | the rows are the first ones in the table, not the largest: sort before. `head(-1)` keeps 19,400 rows, all but the last call of each of the 600 callers |
+
+##### `pd.DataFrame.nlargest`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `n` | required | the number of rows | a column with fewer real values than `n` adds the `NaN` rows at the end |
+| `columns` | required | the column, or a list of columns: the second breaks the ties of the first | a text column raises `TypeError` |
+| `keep` | `'first'` | which rows to keep when values tie at the cut: `'first'`, `'last'` or `'all'` | `'all'` can return more than `n` rows |
+
+##### `pd.core.groupby.DataFrameGroupBy.cumcount`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `ascending` | `True` | `True` counts from the first row of the group, `False` from the last | it needs a sorted table to mean "so far in time" |
+
+##### `pdbook.sessions.sessionize`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `calls` | required | the call records, in any order | — |
+| `gap` | `'30min'` | the largest gap inside a session, as text for `pd.Timedelta`. A gap of exactly `gap` stays in the session | text that is not a time raises `ValueError`. The same code without a sort gives 18,151 sessions against 18,420 ([How it works](#how-it-works)) |
+
+##### `pdbook.sessions.session_table`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `sessions` | required | the result of `sessionize` | — |
+
 
 ## What you have now
 

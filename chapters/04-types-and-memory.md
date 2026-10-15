@@ -67,10 +67,7 @@ pd.DataFrame.memory_usage(
 
 The method returns the bytes of each column, as a Series. The Series method of the same name has the same two parameters and returns one number.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `index` | `True` | include the index as the first entry, named `Index` | — (132 bytes for a `RangeIndex` of 20,000 rows) |
-| `deep` | `False` | `True` counts the bytes of the text itself, not only the pointers to it | for an `object` column, `deep=False` counts 160,132 bytes and `deep=True` counts 1,132,354. For a `str` column both give 312,354 |
+The table under `pd.DataFrame.memory_usage` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 #### `pd.Series.astype`
 
@@ -85,11 +82,7 @@ pd.Series.astype(
 
 The method returns a new Series with every value converted to `dtype`. The DataFrame method also accepts a dict of column to type.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `dtype` | required | the new type, as a string such as `"int8"` or `"category"`, a NumPy type or a pandas type | `astype("int8")` on 300 gives 44, with no error. `1.7` and `-1.7` become `1` and `-1`. A `NaN` to `"int64"` raises `IntCastingNaNError` |
-| `copy` | `<no_default>` | ignored since pandas 3.0. The result is always a new object that shares memory until a write | any value warns with `Pandas4Warning` |
-| `errors` | `'raise'` | `'raise'`, or `'ignore'` to return the input unchanged when a value does not convert | `errors="ignore"` on `["a", "1"]` to `"int64"` returns the strings, with no message. `errors="coerce"` raises `ValueError`: that option exists only in `to_numeric` |
+The table under `pd.Series.astype` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 A category is two arrays: the list of categories and an array of integer codes.
 
@@ -153,10 +146,7 @@ pd.CategoricalDtype(
 
 The class describes a category type: the allowed values and whether they have an order. Pass it to `astype`.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `categories` | `None` | the allowed values, in order. With `None`, `astype` takes the distinct values of the data, sorted | a value of the data that is not in the list becomes `NaN` with only a `Pandas4Warning`. A list with a repeated value or a null raises `ValueError` |
-| `ordered` | `False` | `True` makes `<`, `>` and sorting follow the order of `categories` | with `False`, `status > "a"` raises `TypeError`: only `==` and `!=` work |
+The table under `pd.CategoricalDtype` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Integers: small types and silent wrap
 
@@ -227,12 +217,7 @@ pd.to_numeric(
 
 The function converts text or numbers to a numeric type. It works on one value, a list or a Series.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `arg` | required | a value, a list, an array or a Series | — |
-| `errors` | `'raise'` | `'raise'` stops at the first value that is not a number. `'coerce'` makes it `NaN` | `'coerce'` hides every bad value, and a count of the new `NaN` is the only trace. `errors="ignore"` raises `ValueError` in pandas 3.0 |
-| `downcast` | `None` | `'integer'`, `'signed'`, `'unsigned'` or `'float'`: the smallest type of that kind that holds every value | — (`call_id`: 160,132 → 40,132 bytes). A column with a `NaN` stays `float64` with `downcast="integer"` |
-| `dtype_backend` | `<no_default>` | not set gives NumPy types. `'numpy_nullable'` gives a type that holds a gap | with the default, `["1", None]` becomes `float64`. With `'numpy_nullable'`, it is `Int64` |
+The table under `pd.to_numeric` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Missing integers: the nullable types
 
@@ -323,11 +308,7 @@ pdbook.shrink.shrink(
 
 The function returns a copy of `df` with smaller types. It never changes `df`.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `df` | required | any DataFrame | — |
-| `max_unique_share` | `0.5` | the largest share of distinct values for a text column to become `category` | `callee` (73% distinct) stays `str`. With `0.8`, it becomes a category that saves little ([When not to shrink](#when-not-to-shrink)) |
-| `float_to_int` | `False` | `True` turns float columns of whole numbers into a nullable integer | `duration_s`: 160,132 → 60,132 bytes |
+The table under `pdbook.shrink.shrink` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 The table uses 39% of its memory after the change. The columns `callee` and `start` stay as they were. `callee` has 14,617 distinct values in 20,000 rows, which is more than the limit of 50% in `max_unique_share`. `shrink` leaves it as text.
 
@@ -368,10 +349,7 @@ pdbook.shrink.memory_report(
 
 The function returns one row for each column: the deep bytes before and after, and the dtype change.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `before` | required | the original table | — |
-| `after` | required | the small table, with the same columns | a column that is only in `before` gives a gap in the `after` column |
+The table under `pdbook.shrink.memory_report` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 #### `pdbook.shrink.same_content`
 
@@ -384,10 +362,7 @@ pdbook.shrink.same_content(
 
 The function casts `after` back to the dtypes of `before` and compares the two with `assert_frame_equal`.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `before` | required | the original table | — |
-| `after` | required | the small table | — |
+The table under `pdbook.shrink.same_content` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 `same_content` returns `True`. The two tables say the same, and one needs less than half the memory. Write this test every time you shrink a table.
 
@@ -519,6 +494,62 @@ Look at `cell_id`: the text has 138,061 characters and 141,561 bytes. The names 
 | `pdbook.shrink.shrink` | Build: shrink | a copy with smaller types |
 | `pdbook.shrink.memory_report` | Build: shrink | bytes for each column, before and after |
 | `pdbook.shrink.same_content` | Build: shrink | `True` when the small table, cast back, equals the original |
+
+### Parameters
+
+##### `pd.DataFrame.memory_usage`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `index` | `True` | include the index as the first entry, named `Index` | — (132 bytes for a `RangeIndex` of 20,000 rows) |
+| `deep` | `False` | `True` counts the bytes of the text itself, not only the pointers to it | for an `object` column, `deep=False` counts 160,132 bytes and `deep=True` counts 1,132,354. For a `str` column both give 312,354 |
+
+##### `pd.Series.astype`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `dtype` | required | the new type, as a string such as `"int8"` or `"category"`, a NumPy type or a pandas type | `astype("int8")` on 300 gives 44, with no error. `1.7` and `-1.7` become `1` and `-1`. A `NaN` to `"int64"` raises `IntCastingNaNError` |
+| `copy` | `<no_default>` | ignored since pandas 3.0. The result is always a new object that shares memory until a write | any value warns with `Pandas4Warning` |
+| `errors` | `'raise'` | `'raise'`, or `'ignore'` to return the input unchanged when a value does not convert | `errors="ignore"` on `["a", "1"]` to `"int64"` returns the strings, with no message. `errors="coerce"` raises `ValueError`: that option exists only in `to_numeric` |
+
+##### `pd.CategoricalDtype`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `categories` | `None` | the allowed values, in order. With `None`, `astype` takes the distinct values of the data, sorted | a value of the data that is not in the list becomes `NaN` with only a `Pandas4Warning`. A list with a repeated value or a null raises `ValueError` |
+| `ordered` | `False` | `True` makes `<`, `>` and sorting follow the order of `categories` | with `False`, `status > "a"` raises `TypeError`: only `==` and `!=` work |
+
+##### `pd.to_numeric`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `arg` | required | a value, a list, an array or a Series | — |
+| `errors` | `'raise'` | `'raise'` stops at the first value that is not a number. `'coerce'` makes it `NaN` | `'coerce'` hides every bad value, and a count of the new `NaN` is the only trace. `errors="ignore"` raises `ValueError` in pandas 3.0 |
+| `downcast` | `None` | `'integer'`, `'signed'`, `'unsigned'` or `'float'`: the smallest type of that kind that holds every value | — (`call_id`: 160,132 → 40,132 bytes). A column with a `NaN` stays `float64` with `downcast="integer"` |
+| `dtype_backend` | `<no_default>` | not set gives NumPy types. `'numpy_nullable'` gives a type that holds a gap | with the default, `["1", None]` becomes `float64`. With `'numpy_nullable'`, it is `Int64` |
+
+##### `pdbook.shrink.shrink`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `df` | required | any DataFrame | — |
+| `max_unique_share` | `0.5` | the largest share of distinct values for a text column to become `category` | `callee` (73% distinct) stays `str`. With `0.8`, it becomes a category that saves little ([When not to shrink](#when-not-to-shrink)) |
+| `float_to_int` | `False` | `True` turns float columns of whole numbers into a nullable integer | `duration_s`: 160,132 → 60,132 bytes |
+
+##### `pdbook.shrink.memory_report`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `before` | required | the original table | — |
+| `after` | required | the small table, with the same columns | a column that is only in `before` gives a gap in the `after` column |
+
+##### `pdbook.shrink.same_content`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `before` | required | the original table | — |
+| `after` | required | the small table | — |
+
 
 ## What you have now
 

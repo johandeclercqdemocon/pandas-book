@@ -50,9 +50,7 @@ pd.DataFrame.copy(
 
 The method returns a new object with the same data.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `deep` | `True` | `True` copies the data and the index now. `False` shares the memory until a write | `b = a` is not a copy: a write through `b` changes `a`. Under copy-on-write, `deep=False` is also safe: a write to the shallow copy does not reach `a` |
+The table under `pd.DataFrame.copy` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Chained assignment
 
@@ -118,12 +116,7 @@ pd.DataFrame.fillna(
 
 The method returns the table with each missing value replaced. [Chapter 5](05-missing-data.md) has the Series method, which has the same parameters.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `value` | required | one value for all columns, or a dict or Series of column to value | a key that is not a column is ignored, with no message |
-| `axis` | `None` | `0` or `1`: the axis along which `limit` counts | with a dict `value` and `axis=1`, it raises `ValueError` |
-| `inplace` | `False` | with `True`, change the table and return `None` | `df["a"].fillna(0, inplace=True)` warns with `ChainedAssignmentError` and changes nothing |
-| `limit` | `None` | the largest number of values to fill in each column | — |
+The table under `pd.DataFrame.fillna` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## A function that changes its argument
 
@@ -198,12 +191,7 @@ pd.Series.to_numpy(
 
 The method returns the values as a NumPy array.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `dtype` | `None` | the type of the array. With `None`, the type that holds the values: `object` for `str`, and `float64` for `Int64` with a gap | `dtype="int64"` on a Series with `NaN` gives `-9223372036854775808` in its place, with only a `RuntimeWarning` |
-| `copy` | `False` | `True` always returns a new array that you can write to | with `False`, the array of a NumPy column is read-only: a write raises `ValueError`. A change of `dtype` makes a new array, which is writeable |
-| `na_value` | `<no_default>` | the value for a missing value in the array. Not set means the missing marker of the type | — (`na_value=0` with `dtype="int64"` gives a clean integer array) |
-| `**kwargs` | — | passed to the `to_numpy` of the array type | a name that the type does not know raises `TypeError` |
+The table under `pd.Series.to_numpy` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## The other traps
 
@@ -259,12 +247,7 @@ pdbook.traps.Trap(
 
 The class is a dataclass: one trap as a name, the chapter that shows it, and two functions with no arguments.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `name` | required | a sentence that says what goes wrong | — |
-| `chapter` | required | the chapter that shows the trap | — |
-| `naive` | required | a function that runs the usual code and returns its result | — |
-| `correct` | required | a function that runs the intended code | — |
+The table under `pdbook.traps.Trap` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 #### `pdbook.traps.live`
 
@@ -276,9 +259,7 @@ pdbook.traps.live(
 
 The function returns `True` when `naive()` and `correct()` give different results.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `trap` | required | a `Trap` | it compares with `!=`, so the two functions must return plain values: numbers, lists or strings. Two NumPy arrays give an array of booleans and not one answer. An error in one function goes to the caller. All 10 traps are live in this version |
+The table under `pdbook.traps.live` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Build: how to use the catalog
 
@@ -368,6 +349,48 @@ pandas splits the block and copies one column. The block uses `_mgr`, an interna
 | `pd.Series.to_numpy` | Arrays from pandas | the values as a NumPy array, read-only unless copied |
 | `pdbook.traps.Trap` | The other traps | one trap: a name, a chapter, and two functions |
 | `pdbook.traps.live` | The other traps | `True` when the two functions of a trap disagree |
+
+### Parameters
+
+##### `pd.DataFrame.copy`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `deep` | `True` | `True` copies the data and the index now. `False` shares the memory until a write | `b = a` is not a copy: a write through `b` changes `a`. Under copy-on-write, `deep=False` is also safe: a write to the shallow copy does not reach `a` |
+
+##### `pd.DataFrame.fillna`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `value` | required | one value for all columns, or a dict or Series of column to value | a key that is not a column is ignored, with no message |
+| `axis` | `None` | `0` or `1`: the axis along which `limit` counts | with a dict `value` and `axis=1`, it raises `ValueError` |
+| `inplace` | `False` | with `True`, change the table and return `None` | `df["a"].fillna(0, inplace=True)` warns with `ChainedAssignmentError` and changes nothing |
+| `limit` | `None` | the largest number of values to fill in each column | — |
+
+##### `pd.Series.to_numpy`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `dtype` | `None` | the type of the array. With `None`, the type that holds the values: `object` for `str`, and `float64` for `Int64` with a gap | `dtype="int64"` on a Series with `NaN` gives `-9223372036854775808` in its place, with only a `RuntimeWarning` |
+| `copy` | `False` | `True` always returns a new array that you can write to | with `False`, the array of a NumPy column is read-only: a write raises `ValueError`. A change of `dtype` makes a new array, which is writeable |
+| `na_value` | `<no_default>` | the value for a missing value in the array. Not set means the missing marker of the type | — (`na_value=0` with `dtype="int64"` gives a clean integer array) |
+| `**kwargs` | — | passed to the `to_numpy` of the array type | a name that the type does not know raises `TypeError` |
+
+##### `pdbook.traps.Trap`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `name` | required | a sentence that says what goes wrong | — |
+| `chapter` | required | the chapter that shows the trap | — |
+| `naive` | required | a function that runs the usual code and returns its result | — |
+| `correct` | required | a function that runs the intended code | — |
+
+##### `pdbook.traps.live`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `trap` | required | a `Trap` | it compares with `!=`, so the two functions must return plain values: numbers, lists or strings. Two NumPy arrays give an array of booleans and not one answer. An error in one function goes to the caller. All 10 traps are live in this version |
+
 
 ## What you have now
 

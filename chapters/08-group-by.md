@@ -52,15 +52,7 @@ pd.DataFrame.groupby(
 
 The method returns a `DataFrameGroupBy` object. Nothing is computed until you call a method on it, such as `size`, `sum`, `agg` or `transform`. The Series method has the same parameters.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `by` | `None` | the key: a column name, a list of names, a Series, an array of the same length, a dict or a function of the index labels | a Series key aligns on the index, not on the position: a key with the labels 1 and 2 puts row 0 in no group. A name that is not a column raises `KeyError` |
-| `level` | `None` | group by a level of a MultiIndex, by number or name ([Chapter 11](11-index-and-multiindex.md)) | — |
-| `as_index` | `True` | `True` makes the keys the index of the result. `False` keeps them as columns | `as_index=False` on a Series groupby raises `TypeError` |
-| `sort` | `True` | sort the result by the keys. `False` keeps the order in which each key first appears | — |
-| `group_keys` | `True` | for `apply` with a result of the same shape as the group: add the keys as an index level | with `True`, the index of the result becomes `(key, label)` pairs and does not fit back on the table |
-| `observed` | `True` | for a `category` key: `True` shows only the categories that occur. pandas 3.0 changed the default from `False` | a category with no rows has no row in the report: 4 groups and not 5 for the five categories of [Chapter 4](04-types-and-memory.md) |
-| `dropna` | `True` | drop the rows whose key is missing | `True` loses 277 calls: totals of 19,723 against 20,000 ([Chapter 5](05-missing-data.md)) |
+The table under `pd.DataFrame.groupby` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 The three operations answer different questions:
 
@@ -118,13 +110,7 @@ pd.core.groupby.DataFrameGroupBy.agg(
 
 The method returns one row for each group, with one column for each aggregation. `aggregate` is the same method.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `func` | `None` | a name such as `"mean"`, a function, a list of them, or a dict of column to function. `None` when you use named aggregation | a lambda runs in Python for each group: `agg(lambda s: s.mean())` was 66 times slower than `agg("mean")` over 600 callers |
-| `*args` | — | more positional arguments for a function in `func` | — |
-| `engine` | `None` | `'cython'` or `'numba'` for a function. `None` means `'cython'` | `engine="numba"` raises `ModuleNotFoundError` here |
-| `engine_kwargs` | `None` | options for the `numba` engine | — |
-| `**kwargs` | — | named aggregation: `name=("column", "function")`, one output column for each keyword. With a `func`, more keyword arguments for it | a column that does not exist raises `KeyError`. A keyword that the function does not take raises `TypeError` |
+The table under `pd.core.groupby.DataFrameGroupBy.agg` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 A boolean column is a counter. `sum` counts the `True` values and `mean` gives the share:
 
@@ -219,13 +205,7 @@ pd.core.groupby.DataFrameGroupBy.transform(
 
 The method returns a result with the index of the original table: one value for each row, computed from its group.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `func` | required | a name such as `"sum"`, or a function of one group. One value for each group is spread over the rows of the group | a function that returns fewer rows than the group gets `NaN` for the other rows, with no error |
-| `*args` | — | more positional arguments for `func` | — |
-| `engine` | `None` | `'cython'` or `'numba'` for a function | — |
-| `engine_kwargs` | `None` | options for the `numba` engine | — |
-| `**kwargs` | — | more keyword arguments for `func` | — |
+The table under `pd.core.groupby.DataFrameGroupBy.transform` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## filter: keep or drop whole groups
 
@@ -283,12 +263,7 @@ pd.core.groupby.DataFrameGroupBy.filter(
 
 The method returns the rows of the groups for which `func` returns `True`.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `func` | required | a function of one group that returns one `True` or `False` | a function that returns a number or a Series raises `TypeError`. More than 3 times slower than a mask from `transform("size")` (asserted) |
-| `dropna` | `True` | `False` keeps the rows of the failing groups, with `NaN` in every column | — |
-| `*args` | — | more positional arguments for `func`. They come after `dropna` | `filter(f, 1)` gives the `1` to `dropna`, not to `f`. Pass the argument by name |
-| `**kwargs` | — | more keyword arguments for `func` | — |
+The table under `pd.core.groupby.DataFrameGroupBy.filter` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Keys that are not in the table
 
@@ -354,10 +329,7 @@ pd.Grouper(
 
 The class describes a group key for `groupby`. With `freq`, it groups timestamps into periods, and it becomes a `TimeGrouper`.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `*args` | — | positional arguments. The first one is taken as `key` | — |
-| `**kwargs` | — | `key` (the column), `level`, `freq` (such as `"D"` or `"1h"`), `sort` and `dropna`. With `freq`, also `closed`, `label`, `origin`, `offset` and `convention`, as for `resample` ([Chapter 12](12-dates-and-resampling.md)) | `freq` on a column of text raises `TypeError`. With `freq="D"`, `origin` and `offset` do nothing and give a `RuntimeWarning`. `axis` raises `TypeError` in pandas 3.0 |
+The table under `pd.Grouper` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Totals must add up
 
@@ -423,10 +395,7 @@ pdbook.summary.subscriber_summary(
 
 The function returns one row for each subscriber in `subs`, with zeros for a subscriber who made no call.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `calls` | required | the call records | a call whose caller is not in `subs` is in no row, with no message. The check `summary["calls"].sum() == len(calls)` finds it |
-| `subs` | required | the subscribers, with `subscriber_id`, `plan` and `city` | — |
+The table under `pdbook.summary.subscriber_summary` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 Now the four checks. They run in the example module as well:
 
@@ -546,6 +515,64 @@ The 277 missing cells have the code -1, which is no group. The two sums are equa
 | `pd.core.groupby.DataFrameGroupBy.filter` | filter: keep or drop whole groups | the rows of the groups that pass a test |
 | `pd.Grouper` | Keys that are not in the table | a time key with a frequency, in the zone of the column |
 | `pdbook.summary.subscriber_summary` | Build: subscriber_summary | one row for each subscriber, zeros for no calls |
+
+### Parameters
+
+##### `pd.DataFrame.groupby`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `by` | `None` | the key: a column name, a list of names, a Series, an array of the same length, a dict or a function of the index labels | a Series key aligns on the index, not on the position: a key with the labels 1 and 2 puts row 0 in no group. A name that is not a column raises `KeyError` |
+| `level` | `None` | group by a level of a MultiIndex, by number or name ([Chapter 11](11-index-and-multiindex.md)) | — |
+| `as_index` | `True` | `True` makes the keys the index of the result. `False` keeps them as columns | `as_index=False` on a Series groupby raises `TypeError` |
+| `sort` | `True` | sort the result by the keys. `False` keeps the order in which each key first appears | — |
+| `group_keys` | `True` | for `apply` with a result of the same shape as the group: add the keys as an index level | with `True`, the index of the result becomes `(key, label)` pairs and does not fit back on the table |
+| `observed` | `True` | for a `category` key: `True` shows only the categories that occur. pandas 3.0 changed the default from `False` | a category with no rows has no row in the report: 4 groups and not 5 for the five categories of [Chapter 4](04-types-and-memory.md) |
+| `dropna` | `True` | drop the rows whose key is missing | `True` loses 277 calls: totals of 19,723 against 20,000 ([Chapter 5](05-missing-data.md)) |
+
+##### `pd.core.groupby.DataFrameGroupBy.agg`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `func` | `None` | a name such as `"mean"`, a function, a list of them, or a dict of column to function. `None` when you use named aggregation | a lambda runs in Python for each group: `agg(lambda s: s.mean())` was 66 times slower than `agg("mean")` over 600 callers |
+| `*args` | — | more positional arguments for a function in `func` | — |
+| `engine` | `None` | `'cython'` or `'numba'` for a function. `None` means `'cython'` | `engine="numba"` raises `ModuleNotFoundError` here |
+| `engine_kwargs` | `None` | options for the `numba` engine | — |
+| `**kwargs` | — | named aggregation: `name=("column", "function")`, one output column for each keyword. With a `func`, more keyword arguments for it | a column that does not exist raises `KeyError`. A keyword that the function does not take raises `TypeError` |
+
+##### `pd.core.groupby.DataFrameGroupBy.transform`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `func` | required | a name such as `"sum"`, or a function of one group. One value for each group is spread over the rows of the group | a function that returns fewer rows than the group gets `NaN` for the other rows, with no error |
+| `*args` | — | more positional arguments for `func` | — |
+| `engine` | `None` | `'cython'` or `'numba'` for a function | — |
+| `engine_kwargs` | `None` | options for the `numba` engine | — |
+| `**kwargs` | — | more keyword arguments for `func` | — |
+
+##### `pd.core.groupby.DataFrameGroupBy.filter`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `func` | required | a function of one group that returns one `True` or `False` | a function that returns a number or a Series raises `TypeError`. More than 3 times slower than a mask from `transform("size")` (asserted) |
+| `dropna` | `True` | `False` keeps the rows of the failing groups, with `NaN` in every column | — |
+| `*args` | — | more positional arguments for `func`. They come after `dropna` | `filter(f, 1)` gives the `1` to `dropna`, not to `f`. Pass the argument by name |
+| `**kwargs` | — | more keyword arguments for `func` | — |
+
+##### `pd.Grouper`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `*args` | — | positional arguments. The first one is taken as `key` | — |
+| `**kwargs` | — | `key` (the column), `level`, `freq` (such as `"D"` or `"1h"`), `sort` and `dropna`. With `freq`, also `closed`, `label`, `origin`, `offset` and `convention`, as for `resample` ([Chapter 12](12-dates-and-resampling.md)) | `freq` on a column of text raises `TypeError`. With `freq="D"`, `origin` and `offset` do nothing and give a `RuntimeWarning`. `axis` raises `TypeError` in pandas 3.0 |
+
+##### `pdbook.summary.subscriber_summary`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `calls` | required | the call records | a call whose caller is not in `subs` is in no row, with no message. The check `summary["calls"].sum() == len(calls)` finds it |
+| `subs` | required | the subscribers, with `subscriber_id`, `plan` and `city` | — |
+
 
 ## What you have now
 

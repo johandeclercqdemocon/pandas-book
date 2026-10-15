@@ -76,17 +76,7 @@ pd.DataFrame.to_sql(
 
 The method writes the table into a database table, and returns the number of rows written.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `name` | required | the name of the database table | — |
-| `con` | required | a connection: a `sqlite3` connection, an SQLAlchemy engine or an ADBC connection | — |
-| `schema` | `None` | the schema of the table, for a database that has schemas | — |
-| `if_exists` | `'fail'` | what to do when the table exists: `'fail'`, `'replace'`, `'append'`, or `'delete_rows'`, which empties the table and keeps its definition | `fail` raises `ValueError` on a second run. `append` doubles the rows on a second run, with no error |
-| `index` | `True` | write the index as a column | `index=True` adds a column `index` |
-| `index_label` | `None` | the name of the index column | — |
-| `chunksize` | `None` | the rows in each batch. With `None`, all rows at one time | — |
-| `dtype` | `None` | the column types in the database: a dict of column to type. For `sqlite3`, a type name such as `"TEXT"` | — |
-| `method` | `None` | the insert form: `None` for one row in each statement, `'multi'` for many rows in one statement, or a function | — |
+The table under `pd.DataFrame.to_sql` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 A timestamp with a zone is written as text, such as `2026-09-01 10:00:00+00:00`, and a boolean as the integer 1 or 0.
 
@@ -108,17 +98,7 @@ pd.read_sql_query(
 
 The function runs a query and returns the result as a DataFrame.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `sql` | required | the query text | — |
-| `con` | required | the connection | — |
-| `index_col` | `None` | a column, or columns, to use as the index | — |
-| `coerce_float` | `True` | convert numbers of other types, such as `decimal.Decimal`, to float | — |
-| `params` | `None` | the values for the placeholders: a tuple for `?`, a dict for `:name` | formatting the value into the text breaks on `O'Neil` and can change the query |
-| `parse_dates` | `None` | columns to convert to timestamps, or a dict of column to format | without it, `start` is text |
-| `chunksize` | `None` | return an iterator of tables of this many rows | the result is an iterator, used up after one pass ([Chapter 19](19-data-larger-than-memory.md)) |
-| `dtype` | `None` | a type, or a dict of column to type, for the result | — |
-| `dtype_backend` | `<no_default>` | not set gives NumPy types. `'numpy_nullable'` keeps an integer column with a null as `Int64` | with the default, an integer column with a null becomes `float64` |
+The table under `pd.read_sql_query` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 #### `pdbook.sqlbridge.build_database`
 
@@ -130,9 +110,7 @@ pdbook.sqlbridge.build_database(
 
 The function writes the four tables into SQLite, with `start` as ISO text, and returns the connection.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `conn` | `None` | the connection to write into. With `None`, a new database in memory | it replaces the four tables if they exist. A second call is not an error, and it removes any index that you made on them |
+The table under `pdbook.sqlbridge.build_database` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Parameters
 
@@ -210,6 +188,8 @@ Compare the two side by side. The `JOIN` lines are the two `merge` steps of `enr
 
 `CEIL` is a math function of SQLite. The documentation says that these functions exist from version 3.35 and need a build with them, so the block prints the version that ran. The test says that the two agree. This is the strongest check that a report is right: two implementations in two systems that were written separately.
 
+The SQLite version comes from the Python build, not from pandas. A second machine used the Python 3.13.5 of Debian 13. There, the version was 3.46.1. Every other line of this output was the same.
+
 #### `pdbook.sqlbridge.monthly_report_sql`
 
 ```text
@@ -220,9 +200,7 @@ pdbook.sqlbridge.monthly_report_sql(
 
 The function runs `MONTHLY_REPORT_SQL` and returns the report with the dtypes of the pandas version.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `conn` | required | a connection with the four tables of `build_database` | a database without the tables raises `DatabaseError`. `CEIL` is a math function of SQLite: the chapter prints the version that ran (3.50.4) |
+The table under `pdbook.sqlbridge.monthly_report_sql` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## An index
 
@@ -385,6 +363,49 @@ pandas receives four classes in one column and makes it `object`. A column of a 
 | `pd.read_sql_query` | Write a table, read a query | the result of a query as a DataFrame; values go in `params` |
 | `pdbook.sqlbridge.build_database` | Write a table, read a query | the four tables in SQLite, and the connection |
 | `pdbook.sqlbridge.monthly_report_sql` | The same report in two languages | the monthly report as one query |
+
+### Parameters
+
+##### `pd.DataFrame.to_sql`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `name` | required | the name of the database table | — |
+| `con` | required | a connection: a `sqlite3` connection, an SQLAlchemy engine or an ADBC connection | — |
+| `schema` | `None` | the schema of the table, for a database that has schemas | — |
+| `if_exists` | `'fail'` | what to do when the table exists: `'fail'`, `'replace'`, `'append'`, or `'delete_rows'`, which empties the table and keeps its definition | `fail` raises `ValueError` on a second run. `append` doubles the rows on a second run, with no error |
+| `index` | `True` | write the index as a column | `index=True` adds a column `index` |
+| `index_label` | `None` | the name of the index column | — |
+| `chunksize` | `None` | the rows in each batch. With `None`, all rows at one time | — |
+| `dtype` | `None` | the column types in the database: a dict of column to type. For `sqlite3`, a type name such as `"TEXT"` | — |
+| `method` | `None` | the insert form: `None` for one row in each statement, `'multi'` for many rows in one statement, or a function | — |
+
+##### `pd.read_sql_query`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `sql` | required | the query text | — |
+| `con` | required | the connection | — |
+| `index_col` | `None` | a column, or columns, to use as the index | — |
+| `coerce_float` | `True` | convert numbers of other types, such as `decimal.Decimal`, to float | — |
+| `params` | `None` | the values for the placeholders: a tuple for `?`, a dict for `:name` | formatting the value into the text breaks on `O'Neil` and can change the query |
+| `parse_dates` | `None` | columns to convert to timestamps, or a dict of column to format | without it, `start` is text |
+| `chunksize` | `None` | return an iterator of tables of this many rows | the result is an iterator, used up after one pass ([Chapter 19](19-data-larger-than-memory.md)) |
+| `dtype` | `None` | a type, or a dict of column to type, for the result | — |
+| `dtype_backend` | `<no_default>` | not set gives NumPy types. `'numpy_nullable'` keeps an integer column with a null as `Int64` | with the default, an integer column with a null becomes `float64` |
+
+##### `pdbook.sqlbridge.build_database`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `conn` | `None` | the connection to write into. With `None`, a new database in memory | it replaces the four tables if they exist. A second call is not an error, and it removes any index that you made on them |
+
+##### `pdbook.sqlbridge.monthly_report_sql`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `conn` | required | a connection with the four tables of `build_database` | a database without the tables raises `DatabaseError`. `CEIL` is a math function of SQLite: the chapter prints the version that ran (3.50.4) |
+
 
 ## What you have now
 

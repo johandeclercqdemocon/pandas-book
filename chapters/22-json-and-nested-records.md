@@ -45,9 +45,7 @@ pdbook.traces.read_traces(
 
 The function returns a list with one dict for each line of a JSON-lines file.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `path` | `None` | the file. With `None`, `data/traces.jsonl` | a path that does not exist raises `FileNotFoundError` |
+The table under `pdbook.traces.read_traces` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 `read_json(lines=True)` reads the file as a table, and it keeps the nested parts as Python objects:
 
@@ -98,26 +96,7 @@ pd.read_json(
 
 The function reads JSON into a DataFrame, or with `typ="series"` into a Series. Its defaults convert types, and [How it works](#how-it-works) shows three conversions that change the data.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `path_or_buf` | required | a path, a URL or an open file. Wrap a string of JSON in `io.StringIO` | in pandas 3.0, a string of JSON is read as a file name: `FileNotFoundError` |
-| `orient` | `None` | the shape of the JSON: `'records'`, `'columns'`, `'index'`, `'split'`, `'values'` or `'table'`. With `None`, `'columns'` for a frame | an `orient` that does not fit the text raises an error that does not name the `orient`, such as `AttributeError` |
-| `typ` | `'frame'` | `'frame'` or `'series'` | — |
-| `dtype` | `None` | `None` and `True` infer types. `False` keeps them. A dict gives the type of each column | the inference turns the text `"0477"` into the integer 477 |
-| `convert_axes` | `None` | convert the labels to types. With `None`, `True` for most `orient` values | with `True`, the keys `"1"` and `"2"` become the integers 1 and 2 |
-| `convert_dates` | `True` | convert the columns that look like dates. A list names the columns | — |
-| `keep_default_dates` | `True` | also convert columns by their name: ending with `_at` or `_time`, starting with `timestamp`, or named `modified`, `date` or `datetime` | a column `created_at` of integers becomes timestamps because of its name |
-| `precise_float` | `False` | `True` uses the exact parser for floats | with `False`, `0.3` becomes `0.30000000000000004` |
-| `date_unit` | `None` | the unit of number timestamps: `'s'`, `'ms'`, `'us'` or `'ns'`. With `None`, pandas guesses | — |
-| `encoding` | `None` | the encoding of a binary input. `None` means UTF-8 | a Latin-1 file raises `UnicodeDecodeError` |
-| `encoding_errors` | `'strict'` | what to do with bytes that the encoding cannot read | `'replace'` changes `é` to `�` with no error |
-| `lines` | `False` | `True` reads one JSON object for each line | `meta` and `events` stay as dicts and lists. A JSON-lines file read without it raises `ValueError: Trailing data` |
-| `chunksize` | `None` | return a reader of tables of this many lines. Only with `lines=True` | without `lines=True` it raises `ValueError` |
-| `compression` | `'infer'` | the compression. `'infer'` uses the extension | — |
-| `nrows` | `None` | read only the first lines. Only with `lines=True` | without `lines=True` it raises `ValueError` |
-| `storage_options` | `None` | the connection options for a remote path | — |
-| `dtype_backend` | `<no_default>` | not set gives NumPy types. `'numpy_nullable'` keeps an integer column with a null as `Int64` | with the default, an integer column with a null becomes `float64` |
-| `engine` | `'ujson'` | the parser. `'pyarrow'` works only with `lines=True` | `engine="pyarrow"` without `lines=True` raises `ValueError` |
+The table under `pd.read_json` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Flatten the objects, then the list
 
@@ -158,16 +137,7 @@ pd.json_normalize(
 
 The function turns a list of nested dicts into a flat table. With `record_path`, it makes one row for each element of a list inside each record.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `data` | required | a list of dicts, or one dict | — |
-| `record_path` | `None` | the path to a list in each record: one row for each element | a record with an empty list gives no row. A record without the path raises `KeyError` |
-| `meta` | `None` | fields of the record to copy onto each row. A list in the list is a path, such as `["meta", "cell"]` | a field with the same name as a key of the elements raises `ValueError`: use `meta_prefix` |
-| `meta_prefix` | `None` | a text before the names of the `meta` columns | — |
-| `record_prefix` | `None` | a text before the names of the columns from the list, such as `ev.` | — |
-| `errors` | `'raise'` | `'ignore'` gives `NaN` for a missing meta field | `'raise'` raises `KeyError` for the 23 records with no `meta` |
-| `sep` | `'.'` | the joiner of the path in the column names | — |
-| `max_level` | `None` | the deepest level to flatten. With `None`, all levels | `max_level=0` leaves every nested dict as one cell |
+The table under `pd.json_normalize` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 To get one row for each event, give the path to the list in `record_path` and the fields to carry along in `meta`:
 
@@ -216,10 +186,7 @@ pd.DataFrame.explode(
 
 The method makes one row for each element of a list in a column. The other columns are repeated, and the index label is repeated.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `column` | required | the column of lists, or a list of columns with lists of the same length in each row | an empty list gives one row of missing values: 2,660 rows against 2,652. Lists of different lengths in two columns raise `ValueError` |
-| `ignore_index` | `False` | `True` makes a new `RangeIndex` | with `False`, the labels repeat: 0, 0, 1, 2. The new column is `object`, even when every element is an integer |
+The table under `pd.DataFrame.explode` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 The argument `errors="ignore"` matters. The last line of the block is the same call without it: a record that has no `meta` raises a `KeyError`. With it, the field is `NaN`.
 
@@ -265,9 +232,7 @@ pdbook.traces.events_table(
 
 The function returns one row for each event, with the `call_id`, `caller`, `cell` and `codec` of its call, sorted by call and time.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `records` | required | the list of `read_traces` | calls with no events have no row. An empty list raises `KeyError` |
+The table under `pdbook.traces.events_table` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 #### `pdbook.traces.call_summary`
 
@@ -280,10 +245,7 @@ pdbook.traces.call_summary(
 
 The function returns one row for each call id: the number of events, the time to ringing and to answer, the last response code, and `established`.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `events` | required | the table of `events_table` | — |
-| `call_ids` | required | the ids to report. Each one gets a row, with or without events | an id that has no trace gets a row of 0 events and `NaN`. It does not say whether the trace is missing or the id is wrong |
+The table under `pdbook.traces.call_summary` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Check the summary against the call records
 
@@ -399,6 +361,71 @@ With the defaults, three values change. The phone number loses its leading zero,
 | `pd.DataFrame.explode` | Flatten the objects, then the list | one row for each element of a list; an empty list gives a row of `NaN` |
 | `pdbook.traces.events_table` | Build: the events table and the summary | one row for each event, sorted by call and time |
 | `pdbook.traces.call_summary` | Build: the events table and the summary | one row for each call id, events or not |
+
+### Parameters
+
+##### `pdbook.traces.read_traces`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `path` | `None` | the file. With `None`, `data/traces.jsonl` | a path that does not exist raises `FileNotFoundError` |
+
+##### `pd.read_json`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `path_or_buf` | required | a path, a URL or an open file. Wrap a string of JSON in `io.StringIO` | in pandas 3.0, a string of JSON is read as a file name: `FileNotFoundError` |
+| `orient` | `None` | the shape of the JSON: `'records'`, `'columns'`, `'index'`, `'split'`, `'values'` or `'table'`. With `None`, `'columns'` for a frame | an `orient` that does not fit the text raises an error that does not name the `orient`, such as `AttributeError` |
+| `typ` | `'frame'` | `'frame'` or `'series'` | — |
+| `dtype` | `None` | `None` and `True` infer types. `False` keeps them. A dict gives the type of each column | the inference turns the text `"0477"` into the integer 477 |
+| `convert_axes` | `None` | convert the labels to types. With `None`, `True` for most `orient` values | with `True`, the keys `"1"` and `"2"` become the integers 1 and 2 |
+| `convert_dates` | `True` | convert the columns that look like dates. A list names the columns | — |
+| `keep_default_dates` | `True` | also convert columns by their name: ending with `_at` or `_time`, starting with `timestamp`, or named `modified`, `date` or `datetime` | a column `created_at` of integers becomes timestamps because of its name |
+| `precise_float` | `False` | `True` uses the exact parser for floats | with `False`, `0.3` becomes `0.30000000000000004` |
+| `date_unit` | `None` | the unit of number timestamps: `'s'`, `'ms'`, `'us'` or `'ns'`. With `None`, pandas guesses | — |
+| `encoding` | `None` | the encoding of a binary input. `None` means UTF-8 | a Latin-1 file raises `UnicodeDecodeError` |
+| `encoding_errors` | `'strict'` | what to do with bytes that the encoding cannot read | `'replace'` changes `é` to `�` with no error |
+| `lines` | `False` | `True` reads one JSON object for each line | `meta` and `events` stay as dicts and lists. A JSON-lines file read without it raises `ValueError: Trailing data` |
+| `chunksize` | `None` | return a reader of tables of this many lines. Only with `lines=True` | without `lines=True` it raises `ValueError` |
+| `compression` | `'infer'` | the compression. `'infer'` uses the extension | — |
+| `nrows` | `None` | read only the first lines. Only with `lines=True` | without `lines=True` it raises `ValueError` |
+| `storage_options` | `None` | the connection options for a remote path | — |
+| `dtype_backend` | `<no_default>` | not set gives NumPy types. `'numpy_nullable'` keeps an integer column with a null as `Int64` | with the default, an integer column with a null becomes `float64` |
+| `engine` | `'ujson'` | the parser. `'pyarrow'` works only with `lines=True` | `engine="pyarrow"` without `lines=True` raises `ValueError` |
+
+##### `pd.json_normalize`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `data` | required | a list of dicts, or one dict | — |
+| `record_path` | `None` | the path to a list in each record: one row for each element | a record with an empty list gives no row. A record without the path raises `KeyError` |
+| `meta` | `None` | fields of the record to copy onto each row. A list in the list is a path, such as `["meta", "cell"]` | a field with the same name as a key of the elements raises `ValueError`: use `meta_prefix` |
+| `meta_prefix` | `None` | a text before the names of the `meta` columns | — |
+| `record_prefix` | `None` | a text before the names of the columns from the list, such as `ev.` | — |
+| `errors` | `'raise'` | `'ignore'` gives `NaN` for a missing meta field | `'raise'` raises `KeyError` for the 23 records with no `meta` |
+| `sep` | `'.'` | the joiner of the path in the column names | — |
+| `max_level` | `None` | the deepest level to flatten. With `None`, all levels | `max_level=0` leaves every nested dict as one cell |
+
+##### `pd.DataFrame.explode`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `column` | required | the column of lists, or a list of columns with lists of the same length in each row | an empty list gives one row of missing values: 2,660 rows against 2,652. Lists of different lengths in two columns raise `ValueError` |
+| `ignore_index` | `False` | `True` makes a new `RangeIndex` | with `False`, the labels repeat: 0, 0, 1, 2. The new column is `object`, even when every element is an integer |
+
+##### `pdbook.traces.events_table`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `records` | required | the list of `read_traces` | calls with no events have no row. An empty list raises `KeyError` |
+
+##### `pdbook.traces.call_summary`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `events` | required | the table of `events_table` | — |
+| `call_ids` | required | the ids to report. Each one gets a row, with or without events | an id that has no trace gets a row of 0 events and `NaN`. It does not say whether the trace is missing or the id is wrong |
+
 
 ## What you have now
 

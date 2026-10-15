@@ -141,11 +141,7 @@ pd.DataFrame.pipe(
 
 The method calls `func(df, *args, **kwargs)` and returns what `func` returns.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `func` | required | a function whose first argument is the table. A tuple `(function, "name")` passes the table as the keyword `name` instead | a `func` that returns `None` ends the chain: the next step fails on `None`, far from the cause. With a tuple, a keyword of the same name raises `ValueError` |
-| `*args` | — | more positional arguments for `func` | — |
-| `**kwargs` | — | more keyword arguments for `func` | — |
+The table under `pd.DataFrame.pipe` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 The same chain with a planted fault stops at the check:
 
@@ -183,11 +179,7 @@ pdbook.report.require(
 
 The function is a step for `pipe`. It returns `df` unchanged when `test(df)` is true, and raises `ValueError(message)` when it is false.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `df` | required | the table that the chain passes | — |
-| `test` | required | a function of the table that returns one `True` or `False` | a test that returns a Series raises `ValueError: The truth value of a Series is ambiguous`. End it with `.all()` or `.any()` |
-| `message` | required | the text of the error | — |
+The table under `pdbook.report.require` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## When a chain is too long
 
@@ -242,12 +234,7 @@ pdbook.report.monthly_report(
 
 The function returns one row for each plan and home city: `calls`, `answered`, `billed_min`, `revenue_eur` and `answer_rate`.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `calls` | required | the call records. `call_id` must be unique | a repeated `call_id` raises `ValueError` |
-| `subs` | required | the subscribers | — |
-| `cells` | required | the cells | — |
-| `plans` | required | the plans with their price per minute | a plan missing from `plans` gives revenue 3,681.87 against 4,245.09: the 20 rows are all there, and no error unless you add a check |
+The table under `pdbook.report.monthly_report` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 The last step of the chain in `monthly_report` is `sort_values`, so the rows come out in the order of plan and city.
 
@@ -270,16 +257,7 @@ pd.DataFrame.sort_values(
 
 The method returns the rows in the order of the values of one or more columns.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `by` | required | a column name or a list of names | a name that is not a column raises `KeyError` |
-| `axis` | `0` | `0` sorts the rows. `1` sorts the columns by the values of a row | — |
-| `ascending` | `True` | the direction, or a list with one direction for each name in `by` | a list of another length than `by` raises `ValueError` |
-| `inplace` | `False` | with `True`, change the table and return `None` | `inplace=True` in a chain returns `None` and breaks it |
-| `kind` | `'quicksort'` | the algorithm. `'stable'` and `'mergesort'` keep the order of equal values. Only used for one sort column | with a list in `by`, `kind` is ignored and the sort is always stable |
-| `na_position` | `'last'` | where the missing values go: `'last'` or `'first'` | — |
-| `ignore_index` | `False` | with `True`, the result gets the labels 0, 1, 2 and so on | — |
-| `key` | `None` | a function that changes the column before the sort. It receives the whole Series | `key=str.lower` raises `TypeError`. Write `key=lambda s: s.str.lower()` |
+The table under `pd.DataFrame.sort_values` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 Three tests prove the function. They are independent of each other:
 
@@ -409,6 +387,47 @@ The first four steps keep the rows, and the result shares the columns that the s
 | `pdbook.report.require` | pipe: your own steps | a check as a step: the table, or `ValueError` |
 | `pdbook.report.monthly_report` | Build: monthly_report | one row for each plan and home city |
 | `pd.DataFrame.sort_values` | Build: monthly_report | the rows in the order of column values |
+
+### Parameters
+
+##### `pd.DataFrame.pipe`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `func` | required | a function whose first argument is the table. A tuple `(function, "name")` passes the table as the keyword `name` instead | a `func` that returns `None` ends the chain: the next step fails on `None`, far from the cause. With a tuple, a keyword of the same name raises `ValueError` |
+| `*args` | — | more positional arguments for `func` | — |
+| `**kwargs` | — | more keyword arguments for `func` | — |
+
+##### `pdbook.report.require`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `df` | required | the table that the chain passes | — |
+| `test` | required | a function of the table that returns one `True` or `False` | a test that returns a Series raises `ValueError: The truth value of a Series is ambiguous`. End it with `.all()` or `.any()` |
+| `message` | required | the text of the error | — |
+
+##### `pdbook.report.monthly_report`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `calls` | required | the call records. `call_id` must be unique | a repeated `call_id` raises `ValueError` |
+| `subs` | required | the subscribers | — |
+| `cells` | required | the cells | — |
+| `plans` | required | the plans with their price per minute | a plan missing from `plans` gives revenue 3,681.87 against 4,245.09: the 20 rows are all there, and no error unless you add a check |
+
+##### `pd.DataFrame.sort_values`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `by` | required | a column name or a list of names | a name that is not a column raises `KeyError` |
+| `axis` | `0` | `0` sorts the rows. `1` sorts the columns by the values of a row | — |
+| `ascending` | `True` | the direction, or a list with one direction for each name in `by` | a list of another length than `by` raises `ValueError` |
+| `inplace` | `False` | with `True`, change the table and return `None` | `inplace=True` in a chain returns `None` and breaks it |
+| `kind` | `'quicksort'` | the algorithm. `'stable'` and `'mergesort'` keep the order of equal values. Only used for one sort column | with a list in `by`, `kind` is ignored and the sort is always stable |
+| `na_position` | `'last'` | where the missing values go: `'last'` or `'first'` | — |
+| `ignore_index` | `False` | with `True`, the result gets the labels 0, 1, 2 and so on | — |
+| `key` | `None` | a function that changes the column before the sort. It receives the whole Series | `key=str.lower` raises `TypeError`. Write `key=lambda s: s.str.lower()` |
+
 
 ## What you have now
 

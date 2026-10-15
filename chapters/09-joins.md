@@ -58,20 +58,7 @@ pd.DataFrame.merge(
 
 The method joins two tables on key columns or on the index, and returns a new table. `pd.merge(left, right, ...)` is the same function.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `right` | required | the other table, or a named Series | — |
-| `how` | `'inner'` | `'left'`, `'right'`, `'outer'`, `'inner'` or `'cross'`. `'cross'` gives every pair of rows | the default `'inner'` loses rows without a match in silence: the join with the cell table keeps 19,723 of 20,000 calls |
-| `on` | `None` | the key columns, which have the same name in both tables. With `None`, every column that has the same name in both | with `None`, a second column with the same name becomes part of the key: a shared column `x` gave 0 rows, with no error. Name the key |
-| `left_on` | `None` | the key columns of the left table, when the names differ | `left_on` without `right_on` or `right_index` raises `MergeError` |
-| `right_on` | `None` | the key columns of the right table | a text key and an integer key raise `ValueError`. Two text keys in different forms match nothing |
-| `left_index` | `False` | use the index of the left table as the key | — |
-| `right_index` | `False` | use the index of the right table as the key, for example a lookup table indexed by its key | — |
-| `sort` | `False` | sort the result by the keys | — |
-| `suffixes` | `('_x', '_y')` | the endings for columns that exist on both sides and are not keys | `(None, None)` with such a column raises `ValueError` |
-| `copy` | `<no_default>` | ignored since pandas 3.0 | any value warns with `Pandas4Warning` |
-| `indicator` | `False` | `True` adds the column `_merge` with `both`, `left_only` or `right_only`. A string names the column | — (277 `left_only`, all with a missing key) |
-| `validate` | `None` | `"1:1"`, `"1:m"`, `"m:1"` or `"m:m"`: check that the key is unique on each side marked `1` | without it, 10 duplicate subscribers add 284 rows and no error |
+The table under `pd.DataFrame.merge` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## The number of rows
 
@@ -259,18 +246,7 @@ pd.concat(
 
 The function puts a list of tables or Series together along one axis.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `objs` | required | a list of tables or Series, or a dict of name to table. A `None` in the list is skipped | an empty list raises `ValueError`. A column of integers in one table and of text in the other becomes `object` |
-| `axis` | `0` | `0` stacks the rows, `1` puts the tables next to each other | with `axis=1` the rows align on the index: two tables with the labels 0, 1 and 1 give a `NaN` in row 0 |
-| `join` | `'outer'` | `'outer'` keeps every column, `'inner'` keeps only the columns in all the tables | — |
-| `ignore_index` | `False` | `True` makes a new `RangeIndex` | `False` repeats labels: `loc[0]` returns two rows |
-| `keys` | `None` | one name for each table. It becomes a new outer level of the index | — |
-| `levels` | `None` | the allowed values of the `keys` level, in order | — |
-| `names` | `None` | the names of the levels of the new index | — |
-| `verify_integrity` | `False` | `True` raises `ValueError` when a label repeats | it costs a check of the whole index |
-| `sort` | `<no_default>` | sort the columns that are not in all the tables. Not set means no sort | — |
-| `copy` | `<no_default>` | ignored since pandas 3.0 | any value warns with `Pandas4Warning` |
+The table under `pd.concat` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Build: enrich
 
@@ -312,12 +288,7 @@ pdbook.enrich.enrich(
 
 The function returns `(table, report)`: the calls with seven new columns, and a dict with the count of unmatched keys for each lookup.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `calls` | required | the call records | — |
-| `subs` | required | the subscribers | a duplicate `subscriber_id` raises `MergeError` |
-| `cells` | required | the cells, with `cell_id`, `city` and `tech` | a duplicate `cell_id` raises `MergeError` |
-| `plans` | required | the plans, with `plan` and `rate_per_min_eur` | a duplicate plan raises `MergeError` |
+The table under `pdbook.enrich.enrich` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 The function must also refuse bad input. Plant a fault and see:
 
@@ -397,12 +368,7 @@ pd.Index.get_indexer(
 
 The method returns, for each label of `target`, its position in the index, or -1 when the label is not there.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `target` | required | the labels to look up | an index with a repeated label raises `InvalidIndexError`: a position must be one number |
-| `method` | `None` | for a label that is not there: `'pad'` or `'ffill'` takes the previous label, `'backfill'` or `'bfill'` the next, `'nearest'` the closest | with a `method`, the index must be sorted, or it raises `ValueError` |
-| `limit` | `None` | the largest number of target labels in a row that an inexact match can fill | — |
-| `tolerance` | `None` | the largest distance for an inexact match. A label farther away gets -1 | on the index 10, 20, 30 with `nearest` and `tolerance=3`, 24 gets -1 and 29 gets the position of 30 |
+The table under `pd.Index.get_indexer` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 - **Invariant.** A left join on a unique right key keeps the number of left rows and the order of the left table.
 - **Failure.** A repeated right key makes one position into several, and the row count goes up by the sum of the repeats.
@@ -436,6 +402,59 @@ outer  ['a', 'b', 'c', 'c', 'd']
 | `pd.concat` | concat: stacking tables | tables stacked, aligned on column names or on the index |
 | `pdbook.enrich.enrich` | Build: enrich | the calls with seven lookups, and a report of unmatched keys |
 | `pd.Index.get_indexer` | How it works | the position of each label, -1 when not found |
+
+### Parameters
+
+##### `pd.DataFrame.merge`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `right` | required | the other table, or a named Series | — |
+| `how` | `'inner'` | `'left'`, `'right'`, `'outer'`, `'inner'` or `'cross'`. `'cross'` gives every pair of rows | the default `'inner'` loses rows without a match in silence: the join with the cell table keeps 19,723 of 20,000 calls |
+| `on` | `None` | the key columns, which have the same name in both tables. With `None`, every column that has the same name in both | with `None`, a second column with the same name becomes part of the key: a shared column `x` gave 0 rows, with no error. Name the key |
+| `left_on` | `None` | the key columns of the left table, when the names differ | `left_on` without `right_on` or `right_index` raises `MergeError` |
+| `right_on` | `None` | the key columns of the right table | a text key and an integer key raise `ValueError`. Two text keys in different forms match nothing |
+| `left_index` | `False` | use the index of the left table as the key | — |
+| `right_index` | `False` | use the index of the right table as the key, for example a lookup table indexed by its key | — |
+| `sort` | `False` | sort the result by the keys | — |
+| `suffixes` | `('_x', '_y')` | the endings for columns that exist on both sides and are not keys | `(None, None)` with such a column raises `ValueError` |
+| `copy` | `<no_default>` | ignored since pandas 3.0 | any value warns with `Pandas4Warning` |
+| `indicator` | `False` | `True` adds the column `_merge` with `both`, `left_only` or `right_only`. A string names the column | — (277 `left_only`, all with a missing key) |
+| `validate` | `None` | `"1:1"`, `"1:m"`, `"m:1"` or `"m:m"`: check that the key is unique on each side marked `1` | without it, 10 duplicate subscribers add 284 rows and no error |
+
+##### `pd.concat`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `objs` | required | a list of tables or Series, or a dict of name to table. A `None` in the list is skipped | an empty list raises `ValueError`. A column of integers in one table and of text in the other becomes `object` |
+| `axis` | `0` | `0` stacks the rows, `1` puts the tables next to each other | with `axis=1` the rows align on the index: two tables with the labels 0, 1 and 1 give a `NaN` in row 0 |
+| `join` | `'outer'` | `'outer'` keeps every column, `'inner'` keeps only the columns in all the tables | — |
+| `ignore_index` | `False` | `True` makes a new `RangeIndex` | `False` repeats labels: `loc[0]` returns two rows |
+| `keys` | `None` | one name for each table. It becomes a new outer level of the index | — |
+| `levels` | `None` | the allowed values of the `keys` level, in order | — |
+| `names` | `None` | the names of the levels of the new index | — |
+| `verify_integrity` | `False` | `True` raises `ValueError` when a label repeats | it costs a check of the whole index |
+| `sort` | `<no_default>` | sort the columns that are not in all the tables. Not set means no sort | — |
+| `copy` | `<no_default>` | ignored since pandas 3.0 | any value warns with `Pandas4Warning` |
+
+##### `pdbook.enrich.enrich`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `calls` | required | the call records | — |
+| `subs` | required | the subscribers | a duplicate `subscriber_id` raises `MergeError` |
+| `cells` | required | the cells, with `cell_id`, `city` and `tech` | a duplicate `cell_id` raises `MergeError` |
+| `plans` | required | the plans, with `plan` and `rate_per_min_eur` | a duplicate plan raises `MergeError` |
+
+##### `pd.Index.get_indexer`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `target` | required | the labels to look up | an index with a repeated label raises `InvalidIndexError`: a position must be one number |
+| `method` | `None` | for a label that is not there: `'pad'` or `'ffill'` takes the previous label, `'backfill'` or `'bfill'` the next, `'nearest'` the closest | with a `method`, the index must be sorted, or it raises `ValueError` |
+| `limit` | `None` | the largest number of target labels in a row that an inexact match can fill | — |
+| `tolerance` | `None` | the largest distance for an inexact match. A label farther away gets -1 | on the index 10, 20, 30 with `nearest` and `tolerance=3`, 24 gets -1 and 29 gets the position of 30 |
+
 
 ## What you have now
 

@@ -50,10 +50,7 @@ pdbook.bench.best_of(
 
 The function runs `fn()` `repeat` times and returns `(seconds, result)`: the time of the fastest run and the result of the last run.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `fn` | required | a function with no arguments | the first run includes warm-up, such as the build of a hash table. With `repeat=1`, that is the time you get |
-| `repeat` | `3` | the number of runs | — |
+The table under `pdbook.bench.best_of` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## One task, five ways
 
@@ -133,10 +130,7 @@ pd.DataFrame.itertuples(
 
 The method yields a named tuple for each row. The values keep the types of their columns.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `index` | `True` | put the row label first, as the field `Index` | — |
-| `name` | `'Pandas'` | the name of the named tuple type. `None` yields plain tuples, which are faster | a column name that is not a Python name, such as `my col` or `class`, becomes `_1`, `_2` and so on: `row.class` does not exist |
+The table under `pd.DataFrame.itertuples` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 #### `pdbook.bench.replicate`
 
@@ -149,10 +143,7 @@ pdbook.bench.replicate(
 
 The function returns `times` copies of `df` stacked, with a new `call_id` that is unique.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `df` | required | the call records | — |
-| `times` | required | the number of copies | `times=0` raises `ValueError: No objects to concatenate` |
+The table under `pdbook.bench.replicate` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 #### `pdbook.bench.task_mask_groupby`
 
@@ -164,9 +155,7 @@ pdbook.bench.task_mask_groupby(
 
 The function returns, for each caller, the total talk minutes of answered calls longer than 60 seconds. It is the fourth rung, and the reference that the other rungs must equal.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `df` | required | the call records, or a replica of them | — |
+The table under `pdbook.bench.task_mask_groupby` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Types and speed
 
@@ -376,6 +365,36 @@ The loop grows with the rows: ten times the rows, about ten times the time. The 
 | `pdbook.bench.task_mask_groupby` | One task, five ways | the reference rung: a mask and a `groupby` |
 | `pd.Series.astype` | Types and speed ([Chapter 4](04-types-and-memory.md) has the block) | a conversion; to `category` it pays only when used more than once |
 | `pd.concat` | Do not grow a table in a loop ([Chapter 9](09-joins.md) has the block) | tables stacked; one call copies each row once |
+
+### Parameters
+
+##### `pdbook.bench.best_of`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `fn` | required | a function with no arguments | the first run includes warm-up, such as the build of a hash table. With `repeat=1`, that is the time you get |
+| `repeat` | `3` | the number of runs | — |
+
+##### `pd.DataFrame.itertuples`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `index` | `True` | put the row label first, as the field `Index` | — |
+| `name` | `'Pandas'` | the name of the named tuple type. `None` yields plain tuples, which are faster | a column name that is not a Python name, such as `my col` or `class`, becomes `_1`, `_2` and so on: `row.class` does not exist |
+
+##### `pdbook.bench.replicate`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `df` | required | the call records | — |
+| `times` | required | the number of copies | `times=0` raises `ValueError: No objects to concatenate` |
+
+##### `pdbook.bench.task_mask_groupby`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `df` | required | the call records, or a replica of them | — |
+
 
 ## What you have now
 

@@ -113,17 +113,7 @@ pd.DataFrame.sort_index(
 
 The method returns the table with its rows, or its columns, in the order of their labels.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `axis` | `0` | `0` sorts the rows, `1` sorts the columns | — |
-| `level` | `None` | for a MultiIndex, the level or levels to sort on ([Chapter 11](11-index-and-multiindex.md)) | — |
-| `ascending` | `True` | the direction. A list gives one direction for each level | without the sort, the slice `0:1` on the index 2, 0, 3, 1 returns the labels 0, 3 and 1 |
-| `inplace` | `False` | with `True`, change the table and return `None` | `df = df.sort_index(inplace=True)` sets `df` to `None` |
-| `kind` | `'quicksort'` | the sort algorithm. Only `'mergesort'` and `'stable'` keep the order of equal labels | — |
-| `na_position` | `'last'` | where a missing label goes: `'last'` or `'first'` | — |
-| `sort_remaining` | `True` | after a sort on one level of a MultiIndex, also sort on the other levels | with `False`, the rows with equal labels at the sorted level keep their old order |
-| `ignore_index` | `False` | with `True`, the result gets the labels 0, 1, 2 and so on | the sorted labels are lost |
-| `key` | `None` | a function that changes the labels before the sort. It receives the whole `Index`, not one label | `key=str.lower` raises `TypeError`. Write `key=lambda i: i.str.lower()` |
+The table under `pd.DataFrame.sort_index` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Rows by condition
 
@@ -213,9 +203,7 @@ pd.Series.isin(
 
 The method returns a boolean Series: `True` where the value is in `values`.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `values` | required | a list, a set, a Series or an array of the values to look for | a single string raises `TypeError`. Write `["EVS"]`, not `"EVS"`. A missing value in the list matches the missing values: `isin([np.nan])` finds the 4,474 rows with no codec, but `== np.nan` never matches |
+The table under `pd.Series.isin` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 #### `pd.Series.between`
 
@@ -230,11 +218,7 @@ pd.Series.between(
 
 The method returns a boolean Series: `True` where `left <= value <= right`.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `left` | required | the lower bound | — |
-| `right` | required | the upper bound | `between(120, 60)` gives no row, and no error |
-| `inclusive` | `'both'` | which bounds belong to the range: `'both'`, `'neither'`, `'left'` or `'right'` | 4,226 calls with `between(60, 120)`, and 4,179 with `inclusive="left"`. `inclusive=True` raises `ValueError` |
+The table under `pd.Series.between` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Missing values in a mask
 
@@ -326,16 +310,7 @@ pd.DataFrame.query(
 
 The method returns the rows where the condition in the string is true.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `expr` | required | the condition as a string. `and`, `or` and `@name` work inside it | a typo in a column name raises `UndefinedVariableError` when it runs |
-| `parser` | `'pandas'` | the grammar of the string. `'pandas'` gives `&` and `|` the low priority of `and` and `or` | with `parser="python"`, `"a > 1 & b < 2"` raises `NotImplementedError`, because `&` binds first |
-| `engine` | `None` | the evaluator: `'numexpr'` or `'python'`. `None` uses `numexpr` if it is installed | `engine="numexpr"` raises `ImportError` here, because `numexpr` is not installed |
-| `local_dict` | `None` | the variables for `@name`. With `None`, the local variables of the caller | — |
-| `global_dict` | `None` | the global variables for `@name`. With `None`, the globals of the caller | — |
-| `resolvers` | `None` | more objects in which to look up names | — |
-| `level` | `0` | how many frames up the call stack to look for `@name` variables | — |
-| `inplace` | `False` | with `True`, change the table and return `None` | — |
+The table under `pd.DataFrame.query` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Set values with .loc
 
@@ -418,9 +393,7 @@ examples.ch03_selection.ops_questions(
 
 The function returns a dict of question to count.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `calls` | required | the call records, with the types that `load_calls` gives | a `start` column of text, not timestamps, makes the last question raise `TypeError` |
+The table under `examples.ch03_selection.ops_questions` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 Read the second line. 212 calls were answered, so media flowed, and the record has no cell. This is a data-quality fact, and it needs a decision: [Chapter 5](05-missing-data.md) treats it. Read the last line. The range uses `inclusive="left"`, so a call at exactly midnight on 11 September belongs to 11 September.
 
@@ -509,6 +482,56 @@ The unique index answers in less than a microsecond. The unsorted index with rep
 | `examples.ch03_selection.ops_questions` | Build: ops_questions | five counts for an operations team, as a dict |
 
 `.loc` and `.iloc` are indexers, not functions, so they have no signature. `.loc[a:b]` includes `b`. `.iloc[a:b]` excludes it.
+
+### Parameters
+
+##### `pd.DataFrame.sort_index`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `axis` | `0` | `0` sorts the rows, `1` sorts the columns | — |
+| `level` | `None` | for a MultiIndex, the level or levels to sort on ([Chapter 11](11-index-and-multiindex.md)) | — |
+| `ascending` | `True` | the direction. A list gives one direction for each level | without the sort, the slice `0:1` on the index 2, 0, 3, 1 returns the labels 0, 3 and 1 |
+| `inplace` | `False` | with `True`, change the table and return `None` | `df = df.sort_index(inplace=True)` sets `df` to `None` |
+| `kind` | `'quicksort'` | the sort algorithm. Only `'mergesort'` and `'stable'` keep the order of equal labels | — |
+| `na_position` | `'last'` | where a missing label goes: `'last'` or `'first'` | — |
+| `sort_remaining` | `True` | after a sort on one level of a MultiIndex, also sort on the other levels | with `False`, the rows with equal labels at the sorted level keep their old order |
+| `ignore_index` | `False` | with `True`, the result gets the labels 0, 1, 2 and so on | the sorted labels are lost |
+| `key` | `None` | a function that changes the labels before the sort. It receives the whole `Index`, not one label | `key=str.lower` raises `TypeError`. Write `key=lambda i: i.str.lower()` |
+
+##### `pd.Series.isin`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `values` | required | a list, a set, a Series or an array of the values to look for | a single string raises `TypeError`. Write `["EVS"]`, not `"EVS"`. A missing value in the list matches the missing values: `isin([np.nan])` finds the 4,474 rows with no codec, but `== np.nan` never matches |
+
+##### `pd.Series.between`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `left` | required | the lower bound | — |
+| `right` | required | the upper bound | `between(120, 60)` gives no row, and no error |
+| `inclusive` | `'both'` | which bounds belong to the range: `'both'`, `'neither'`, `'left'` or `'right'` | 4,226 calls with `between(60, 120)`, and 4,179 with `inclusive="left"`. `inclusive=True` raises `ValueError` |
+
+##### `pd.DataFrame.query`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `expr` | required | the condition as a string. `and`, `or` and `@name` work inside it | a typo in a column name raises `UndefinedVariableError` when it runs |
+| `parser` | `'pandas'` | the grammar of the string. `'pandas'` gives `&` and `|` the low priority of `and` and `or` | with `parser="python"`, `"a > 1 & b < 2"` raises `NotImplementedError`, because `&` binds first |
+| `engine` | `None` | the evaluator: `'numexpr'` or `'python'`. `None` uses `numexpr` if it is installed | `engine="numexpr"` raises `ImportError` here, because `numexpr` is not installed |
+| `local_dict` | `None` | the variables for `@name`. With `None`, the local variables of the caller | — |
+| `global_dict` | `None` | the global variables for `@name`. With `None`, the globals of the caller | — |
+| `resolvers` | `None` | more objects in which to look up names | — |
+| `level` | `0` | how many frames up the call stack to look for `@name` variables | — |
+| `inplace` | `False` | with `True`, change the table and return `None` | — |
+
+##### `examples.ch03_selection.ops_questions`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `calls` | required | the call records, with the types that `load_calls` gives | a `start` column of text, not timestamps, makes the last question raise `TypeError` |
+
 
 ## What you have now
 

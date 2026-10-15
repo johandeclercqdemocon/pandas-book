@@ -76,9 +76,7 @@ pd.Series.str.strip(
 
 The method removes characters from both ends of each string. `lstrip` and `rstrip` remove them from one end.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `to_strip` | `None` | the characters to remove, as one string that is read as a set. With `None`, white space | the argument is a set, not a word: `strip("ab")` on `abcba` gives `c`. `strip("x€ ")` on `€ 12` gives `12` |
+The table under `pd.Series.str.strip` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Plan: trim and lower
 
@@ -134,9 +132,7 @@ pdbook.clean.name_key(
 
 The function returns a Series of keys for comparison, not for display.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `name` | required | the names as text | 172 distinct keys for 244 phones: two people with the same name get one key |
+The table under `pdbook.clean.name_key` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 The first three names become one key. The key for `Van den Berg, An` is `an van den berg`. Use `casefold` and not `lower`, because `casefold` also maps the German `ß` to `ss`. The block prints the proof.
 
@@ -198,14 +194,7 @@ pd.Series.str.replace(
 
 The method replaces each occurrence of `pat` in each string.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `pat` | required | the text or the pattern to find. A dict of old to new replaces several texts at one time | with `regex=True`, `.` is any character: `replace(".", "-", regex=True)` on `a.b.c` gives `-----` |
-| `repl` | `None` | the new text, or a function that receives the match and returns text. `None` is allowed only with a dict for `pat` | without `repl` and without a dict, it raises `TypeError`. A function needs `regex=True`, or it raises `ValueError` |
-| `n` | `-1` | the largest number of replacements in each string. `-1` replaces all | `n=1` on `a.b.c` gives `a-b.c` |
-| `case` | `None` | `False` ignores upper and lower case. `None` means case-sensitive | — |
-| `flags` | `0` | flags of the `re` module, such as `re.IGNORECASE` | — |
-| `regex` | `False` | `True` reads `pat` as a regular expression | `"+"` with `regex=True` raises `ArrowInvalid`, because `+` means "repeat" |
+The table under `pd.Series.str.replace` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 The last line is the check. After the four steps, 269 numbers have 9 digits, and two do not. Those two are the cases that the rules cannot repair: `12 34` is too short, and the UK number `+44 7700 900123` is a valid number of another country. The function `e164` in `pdbook/clean.py` returns `NaN` for them, and `clean_contacts` lists them in the rejects.
 
@@ -219,9 +208,7 @@ pdbook.clean.e164(
 
 The function returns each Belgian number as `+32` and nine digits. A number that does not fit becomes `NaN`.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `phone` | required | the phone numbers as text, in any of the five formats | a column of integers raises `AttributeError`: read the column with `dtype=str` ([Chapter 2](02-input-and-output.md)) |
+The table under `pdbook.clean.e164` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Dates: mixed formats
 
@@ -277,18 +264,7 @@ pd.to_datetime(
 
 The function converts text, numbers or a table of year, month and day columns to timestamps.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `arg` | required | a value, a list, a Series, or a DataFrame with the columns `year`, `month` and `day` | — |
-| `errors` | `'raise'` | `'raise'` stops at the first value that does not parse. `'coerce'` makes it `NaT` | `'coerce'` hides `31/02/2024` and `someday` as `NaT`. `errors="ignore"` raises an error in pandas 3.0 |
-| `dayfirst` | `False` | read `07/06/2025` as day first | `False` gives 2025-07-06 and `True` gives 2025-06-07. `True` also swaps an ISO date: `2025-01-02` becomes 1 February |
-| `yearfirst` | `False` | read `10/11/12` as year first: 2010-11-12 | — |
-| `utc` | `False` | return timestamps in UTC. Text with a zone is converted, text without a zone is taken as UTC | text with two different offsets, such as `+01:00` and `+02:00`, raises `ValueError` without `utc=True` |
-| `format` | `None` | the exact format, such as `"%d/%m/%Y"`, or `"ISO8601"`, or `"mixed"` for a format for each value. With `None`, the first value decides the format | without it, a column with four formats raises `ValueError` at the first value of another format |
-| `exact` | `<no_default>` | with `False`, the `format` can match a part of the text. Not set means `True` | `"on 2025-01-02 ok"` with `format="%Y-%m-%d"` raises `ValueError`. With `exact=False` it gives 2025-01-02 |
-| `unit` | `None` | the unit of numbers: `'s'`, `'ms'`, `'us'` or `'ns'`, counted from `origin` | without it, an integer is read as nanoseconds: 1788214410 gives 1970-01-01 00:00:01.788. With `unit="s"` it is 2026-08-31 22:13:30 |
-| `origin` | `'unix'` | the start of the count for numbers. `'unix'` is 1970-01-01 | — |
-| `cache` | `True` | convert each distinct value once | — |
+The table under `pd.to_datetime` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 The obvious repair is `format="mixed"`, which parses each element on its own, with `dayfirst=True` for the Belgian dates. It is wrong. `dayfirst` is not limited to the dates with slashes: the mixed parser also applies it to an ISO date, where the year comes first and the order is fixed. The file holds the same signup date in four formats, so you can compare the mixed parser with one exact format for each pattern:
 
@@ -346,9 +322,7 @@ pdbook.clean.dates(
 
 The function returns a `datetime64[us]` Series. A value that fits none of `DATE_FORMATS` becomes `NaT`.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `s` | required | the text of the dates | a fifth format in a new export becomes `NaT`. The rejects table of `clean_contacts` lists each one, so the count shows it |
+The table under `pdbook.clean.dates` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Money
 
@@ -382,9 +356,7 @@ pdbook.clean.money(
 
 The function returns the amounts as `float64`. A marker for no value and text that is not an amount become `NaN`.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `s` | required | the amounts as text, with `€`, `EUR`, thousands separators or a sign | a decimal comma is read as a thousands separator: `12,5` gives 125 and `1.234,50` gives 1.2345, with no error. The rule fits this export, which uses a decimal point |
+The table under `pdbook.clean.money` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 The first line shows the function on the cases. `twelve euros` becomes `NaN`, like the markers, and that is why `clean_contacts` compares the result with the markers and lists the difference as a reject.
 
@@ -434,10 +406,7 @@ pd.DataFrame.duplicated(
 
 The method returns a boolean Series: `True` for each row that repeats an earlier row. The Series method has the parameter `keep` only.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `subset` | `None` | the columns that define a repeat. With `None`, all columns | two missing keys count as equal: 26 duplicates, one of them a missing key |
-| `keep` | `'first'` | `'first'` marks every copy after the first. `'last'` marks every copy before the last. `False` marks every copy | `keep=False` marks the first copy too |
+The table under `pd.DataFrame.duplicated` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 #### `pd.DataFrame.drop_duplicates`
 
@@ -454,12 +423,7 @@ pd.DataFrame.drop_duplicates(
 
 The method returns the table without the rows that `duplicated` marks.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `subset` | `None` | the columns that define a duplicate. One name or a list | a name that is not a column raises `KeyError` |
-| `keep` | `'first'` | which copy stays: `'first'`, `'last'`, or `False` for none | `keep=False` removes every row that has a copy, the first one included |
-| `inplace` | `False` | with `True`, change the table and return `None` | — |
-| `ignore_index` | `False` | with `True`, the result gets the labels 0, 1, 2 and so on | with `False`, the labels have holes where rows were removed |
+The table under `pd.DataFrame.drop_duplicates` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 The last two lines show a trap. `duplicated` treats two missing values as equal, so the second row with a missing phone counts as a duplicate of the first. A row that has no key is not a duplicate of anything. `clean_contacts` excludes missing keys from the test.
 
@@ -508,9 +472,7 @@ pdbook.clean.clean_contacts(
 
 The function returns two tables: the clean contacts, and one row for each value that no rule could repair.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `raw` | required | the export, read with `dtype=str` so that no column is guessed | 271 rows in, 246 out, 6 rejects |
+The table under `pdbook.clean.clean_contacts` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 The input has 271 rows. The output has 246: 25 duplicates are removed, and nothing else. Six values are rejected, one for each kind of damage that no rule repairs. Each reject has the row number in the raw table and the raw text, so a person can open the source and decide.
 
@@ -552,12 +514,7 @@ pd.Series.str.match(
 
 The method returns a boolean Series: `True` where the start of the string matches the pattern.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `pat` | required | a regular expression | the match is at the start only: `\+32\d{9}` accepts `+3247712345678`, which has 13 digits. End the pattern with `$`, or use `str.fullmatch` |
-| `case` | `<no_default>` | `False` ignores upper and lower case. Not set means case-sensitive | — |
-| `flags` | `<no_default>` | flags of the `re` module | — |
-| `na` | `<no_default>` | the result for a missing value. Not set means `False` for the `str` dtype | on the `object` dtype, a missing value gives `NaN`, and the result cannot be a mask ([Chapter 3](03-selection.md)) |
+The table under `pd.Series.str.match` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 The first three lines are `True`: every phone has the canonical form, no phone repeats, and every plan is one of the four. The last line is `False`: no name has a leading, trailing or double space. Run the same four checks on the real file, every time that it arrives.
 
@@ -654,6 +611,96 @@ The kernel is the fast case by more than four times, which is what the assertion
 | `pd.DataFrame.drop_duplicates` | Duplicates | the table without the repeats |
 | `pdbook.clean.clean_contacts` | Build: clean_contacts | `(clean, rejects)` |
 | `pd.Series.str.match` | Build: clean_contacts | a mask: the start of the string matches a pattern |
+
+### Parameters
+
+##### `pd.Series.str.strip`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `to_strip` | `None` | the characters to remove, as one string that is read as a set. With `None`, white space | the argument is a set, not a word: `strip("ab")` on `abcba` gives `c`. `strip("x€ ")` on `€ 12` gives `12` |
+
+##### `pdbook.clean.name_key`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `name` | required | the names as text | 172 distinct keys for 244 phones: two people with the same name get one key |
+
+##### `pd.Series.str.replace`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `pat` | required | the text or the pattern to find. A dict of old to new replaces several texts at one time | with `regex=True`, `.` is any character: `replace(".", "-", regex=True)` on `a.b.c` gives `-----` |
+| `repl` | `None` | the new text, or a function that receives the match and returns text. `None` is allowed only with a dict for `pat` | without `repl` and without a dict, it raises `TypeError`. A function needs `regex=True`, or it raises `ValueError` |
+| `n` | `-1` | the largest number of replacements in each string. `-1` replaces all | `n=1` on `a.b.c` gives `a-b.c` |
+| `case` | `None` | `False` ignores upper and lower case. `None` means case-sensitive | — |
+| `flags` | `0` | flags of the `re` module, such as `re.IGNORECASE` | — |
+| `regex` | `False` | `True` reads `pat` as a regular expression | `"+"` with `regex=True` raises `ArrowInvalid`, because `+` means "repeat" |
+
+##### `pdbook.clean.e164`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `phone` | required | the phone numbers as text, in any of the five formats | a column of integers raises `AttributeError`: read the column with `dtype=str` ([Chapter 2](02-input-and-output.md)) |
+
+##### `pd.to_datetime`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `arg` | required | a value, a list, a Series, or a DataFrame with the columns `year`, `month` and `day` | — |
+| `errors` | `'raise'` | `'raise'` stops at the first value that does not parse. `'coerce'` makes it `NaT` | `'coerce'` hides `31/02/2024` and `someday` as `NaT`. `errors="ignore"` raises an error in pandas 3.0 |
+| `dayfirst` | `False` | read `07/06/2025` as day first | `False` gives 2025-07-06 and `True` gives 2025-06-07. `True` also swaps an ISO date: `2025-01-02` becomes 1 February |
+| `yearfirst` | `False` | read `10/11/12` as year first: 2010-11-12 | — |
+| `utc` | `False` | return timestamps in UTC. Text with a zone is converted, text without a zone is taken as UTC | text with two different offsets, such as `+01:00` and `+02:00`, raises `ValueError` without `utc=True` |
+| `format` | `None` | the exact format, such as `"%d/%m/%Y"`, or `"ISO8601"`, or `"mixed"` for a format for each value. With `None`, the first value decides the format | without it, a column with four formats raises `ValueError` at the first value of another format |
+| `exact` | `<no_default>` | with `False`, the `format` can match a part of the text. Not set means `True` | `"on 2025-01-02 ok"` with `format="%Y-%m-%d"` raises `ValueError`. With `exact=False` it gives 2025-01-02 |
+| `unit` | `None` | the unit of numbers: `'s'`, `'ms'`, `'us'` or `'ns'`, counted from `origin` | without it, an integer is read as nanoseconds: 1788214410 gives 1970-01-01 00:00:01.788. With `unit="s"` it is 2026-08-31 22:13:30 |
+| `origin` | `'unix'` | the start of the count for numbers. `'unix'` is 1970-01-01 | — |
+| `cache` | `True` | convert each distinct value once | — |
+
+##### `pdbook.clean.dates`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `s` | required | the text of the dates | a fifth format in a new export becomes `NaT`. The rejects table of `clean_contacts` lists each one, so the count shows it |
+
+##### `pdbook.clean.money`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `s` | required | the amounts as text, with `€`, `EUR`, thousands separators or a sign | a decimal comma is read as a thousands separator: `12,5` gives 125 and `1.234,50` gives 1.2345, with no error. The rule fits this export, which uses a decimal point |
+
+##### `pd.DataFrame.duplicated`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `subset` | `None` | the columns that define a repeat. With `None`, all columns | two missing keys count as equal: 26 duplicates, one of them a missing key |
+| `keep` | `'first'` | `'first'` marks every copy after the first. `'last'` marks every copy before the last. `False` marks every copy | `keep=False` marks the first copy too |
+
+##### `pd.DataFrame.drop_duplicates`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `subset` | `None` | the columns that define a duplicate. One name or a list | a name that is not a column raises `KeyError` |
+| `keep` | `'first'` | which copy stays: `'first'`, `'last'`, or `False` for none | `keep=False` removes every row that has a copy, the first one included |
+| `inplace` | `False` | with `True`, change the table and return `None` | — |
+| `ignore_index` | `False` | with `True`, the result gets the labels 0, 1, 2 and so on | with `False`, the labels have holes where rows were removed |
+
+##### `pdbook.clean.clean_contacts`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `raw` | required | the export, read with `dtype=str` so that no column is guessed | 271 rows in, 246 out, 6 rejects |
+
+##### `pd.Series.str.match`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `pat` | required | a regular expression | the match is at the start only: `\+32\d{9}` accepts `+3247712345678`, which has 13 digits. End the pattern with `$`, or use `str.fullmatch` |
+| `case` | `<no_default>` | `False` ignores upper and lower case. Not set means case-sensitive | — |
+| `flags` | `<no_default>` | flags of the `re` module | — |
+| `na` | `<no_default>` | the result for a missing value. Not set means `False` for the `str` dtype | on the `object` dtype, a missing value gives `NaN`, and the result cannot be a mask ([Chapter 3](03-selection.md)) |
+
 
 ## What you have now
 

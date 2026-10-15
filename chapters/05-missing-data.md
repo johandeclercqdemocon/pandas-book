@@ -117,9 +117,7 @@ pdbook.nulls.null_report(
 
 The function returns one row for each column that has a missing value: the count and the share.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `df` | required | any DataFrame | a table with no missing value gives an empty table, not an error |
+The table under `pdbook.nulls.null_report` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 #### `pdbook.nulls.determinants`
 
@@ -132,10 +130,7 @@ pdbook.nulls.determinants(
 
 The function returns, for each column with nulls, the columns of few distinct values that decide whether it is null.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `df` | required | any DataFrame | it finds exact relations only, not weaker ones |
-| `max_levels` | `12` | the largest number of distinct values for a column to be a candidate | with `max_levels=3`, `status` (4 values) is not tested, and every list is empty |
+The table under `pdbook.nulls.determinants` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 The method `groupby`, in the next block, has its signature and parameters in [Chapter 8](08-group-by.md), the chapter about groups.
 
@@ -214,12 +209,7 @@ pd.Series.mean(
 
 The method returns the mean of the values. The DataFrame method returns one mean for each column.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `axis` | `0` | not used for a Series. For a DataFrame, `0` gives a mean for each column and `1` for each row | — |
-| `skipna` | `True` | skip the missing values. `False` gives `NaN` when any value is missing | the mean of `duration_s` is `NaN` with `skipna=False` |
-| `numeric_only` | `False` | for a DataFrame, use only the number and boolean columns | `calls.mean()` raises `TypeError` on the text columns. `numeric_only=True` gives the means of `call_id`, `duration_s` and `roaming` |
-| `**kwargs` | — | accepted for compatibility with NumPy. pandas does not use them | a name that pandas does not know raises `TypeError` |
+The table under `pd.Series.mean` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 Three different means from one column. The skipping mean is 108.73. It divides by 18,967, the count of non-null values. The mean with `skipna=False` is `NaN`, because one unknown makes the whole mean unknown. The mean after `fillna(0)` is 103.12.
 
@@ -267,14 +257,7 @@ pd.DataFrame.dropna(
 
 The method returns the table without the rows, or the columns, that have missing values.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `axis` | `0` | `0` drops rows, `1` drops columns | `axis=1` drops `duration_s`, `cell_id` and `codec`: 3 of 9 columns |
-| `how` | `<no_default>` | `'any'` drops a row with one null, `'all'` drops a row with only nulls. Not set means `'any'` | `dropna()` removes 4,686 of 20,000 rows |
-| `thresh` | `<no_default>` | keep the rows with at least this many values | `thresh=9` on 9 columns is the same as `how="any"`. `how` and `thresh` together raise `TypeError` |
-| `subset` | `None` | look only at these columns | `subset=["cell_id"]` removes 277 rows. A name that is not a column raises `KeyError` |
-| `inplace` | `False` | with `True`, change the table and return `None` | — |
-| `ignore_index` | `False` | with `True`, the result gets the labels 0, 1, 2 and so on | with `False`, the labels have holes: 0, 2, 3 |
+The table under `pd.DataFrame.dropna` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 #### `pd.Series.fillna`
 
@@ -291,12 +274,7 @@ pd.Series.fillna(
 
 The method returns the Series with each missing value replaced by `value`.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `value` | required | the value to put in place of a missing value, or a dict of label to value | `fillna(0)` on `duration_s` moves the mean from 108.73 to 103.12. A string on a `float64` column makes it `object`, with no error. A list raises `TypeError` |
-| `axis` | `None` | not used for a Series | — |
-| `inplace` | `False` | with `True`, change the Series and return `None` | — |
-| `limit` | `None` | the largest number of values to fill, counted along the whole Series | `limit=2` fills the first two missing values of the Series, not two in each gap. For a limit in each gap, use `ffill` or `interpolate` |
+The table under `pd.Series.fillna` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 In pandas 3.0, `fillna` has no `method` argument. `fillna(method="ffill")` raises `TypeError`, and the method `ffill` below does that work.
 
@@ -389,15 +367,7 @@ pd.Series.interpolate(
 
 The method fills the missing values with values on a line between the known values around them.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `method` | `'linear'` | how to compute the new values. `'linear'` treats the rows as equally spaced. `'index'` and `'time'` use the index | `'linear'` ignores the index: on the labels 0, 1, 2, 10 with values 1, gap, gap, 4 it gives 2 and 3. `method="index"` gives 1.3 and 1.6 |
-| `axis` | `0` | not used for a Series | — |
-| `limit` | `None` | the largest number of missing values in a row to fill | no `limit`: all 42 missing steps filled, the 2-hour outage included. `limit=3` leaves 21 |
-| `inplace` | `False` | with `True`, change the Series and return `None` | — |
-| `limit_direction` | `None` | `'forward'`, `'backward'` or `'both'`: the side from which to count `limit`. `None` means `'forward'` for `'linear'` | the default also fills after the last known value, by copying it: `[nan, 1, nan, nan, nan, 5, nan]` ends with 5.0. The first `nan` stays |
-| `limit_area` | `None` | `'inside'` fills only the gaps between two known values. `'outside'` fills only the ends | `'inside'` leaves both ends as `nan` |
-| `**kwargs` | — | more arguments for SciPy methods, such as `order` for `'polynomial'` | `method="polynomial"` needs SciPy, which this book does not install: `ImportError` |
+The table under `pd.Series.interpolate` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 #### `pd.Series.ffill`
 
@@ -414,12 +384,7 @@ pd.Series.ffill(
 
 The method fills each missing value with the last known value before it.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `axis` | `None` | not used for a Series | — |
-| `inplace` | `False` | with `True`, change the Series and return `None` | — |
-| `limit` | `None` | the largest number of missing values in a row to fill | `limit=3` leaves 21 of 42 |
-| `limit_area` | `None` | `'inside'` fills only between two known values. `'outside'` fills only after the last one | with the default, the gap after the last known value is filled too. A value that is no longer reported continues forever |
+The table under `pd.Series.ffill` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 `ffill` repeats the last value: "the load did not change". `interpolate` draws a line between the two ends: "the load changed steadily".
 
@@ -543,6 +508,72 @@ With `skipna=False`, "is any value true" over `[False, <NA>]` is `<NA>`: the unk
 | `pd.Series.fillna` | Fill, drop or keep | each missing value replaced by one value |
 | `pd.Series.interpolate` | Time series: gaps | a line through each gap, with an optional limit |
 | `pd.Series.ffill` | Time series: gaps | the last known value repeated into each gap |
+
+### Parameters
+
+##### `pdbook.nulls.null_report`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `df` | required | any DataFrame | a table with no missing value gives an empty table, not an error |
+
+##### `pdbook.nulls.determinants`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `df` | required | any DataFrame | it finds exact relations only, not weaker ones |
+| `max_levels` | `12` | the largest number of distinct values for a column to be a candidate | with `max_levels=3`, `status` (4 values) is not tested, and every list is empty |
+
+##### `pd.Series.mean`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `axis` | `0` | not used for a Series. For a DataFrame, `0` gives a mean for each column and `1` for each row | — |
+| `skipna` | `True` | skip the missing values. `False` gives `NaN` when any value is missing | the mean of `duration_s` is `NaN` with `skipna=False` |
+| `numeric_only` | `False` | for a DataFrame, use only the number and boolean columns | `calls.mean()` raises `TypeError` on the text columns. `numeric_only=True` gives the means of `call_id`, `duration_s` and `roaming` |
+| `**kwargs` | — | accepted for compatibility with NumPy. pandas does not use them | a name that pandas does not know raises `TypeError` |
+
+##### `pd.DataFrame.dropna`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `axis` | `0` | `0` drops rows, `1` drops columns | `axis=1` drops `duration_s`, `cell_id` and `codec`: 3 of 9 columns |
+| `how` | `<no_default>` | `'any'` drops a row with one null, `'all'` drops a row with only nulls. Not set means `'any'` | `dropna()` removes 4,686 of 20,000 rows |
+| `thresh` | `<no_default>` | keep the rows with at least this many values | `thresh=9` on 9 columns is the same as `how="any"`. `how` and `thresh` together raise `TypeError` |
+| `subset` | `None` | look only at these columns | `subset=["cell_id"]` removes 277 rows. A name that is not a column raises `KeyError` |
+| `inplace` | `False` | with `True`, change the table and return `None` | — |
+| `ignore_index` | `False` | with `True`, the result gets the labels 0, 1, 2 and so on | with `False`, the labels have holes: 0, 2, 3 |
+
+##### `pd.Series.fillna`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `value` | required | the value to put in place of a missing value, or a dict of label to value | `fillna(0)` on `duration_s` moves the mean from 108.73 to 103.12. A string on a `float64` column makes it `object`, with no error. A list raises `TypeError` |
+| `axis` | `None` | not used for a Series | — |
+| `inplace` | `False` | with `True`, change the Series and return `None` | — |
+| `limit` | `None` | the largest number of values to fill, counted along the whole Series | `limit=2` fills the first two missing values of the Series, not two in each gap. For a limit in each gap, use `ffill` or `interpolate` |
+
+##### `pd.Series.interpolate`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `method` | `'linear'` | how to compute the new values. `'linear'` treats the rows as equally spaced. `'index'` and `'time'` use the index | `'linear'` ignores the index: on the labels 0, 1, 2, 10 with values 1, gap, gap, 4 it gives 2 and 3. `method="index"` gives 1.3 and 1.6 |
+| `axis` | `0` | not used for a Series | — |
+| `limit` | `None` | the largest number of missing values in a row to fill | no `limit`: all 42 missing steps filled, the 2-hour outage included. `limit=3` leaves 21 |
+| `inplace` | `False` | with `True`, change the Series and return `None` | — |
+| `limit_direction` | `None` | `'forward'`, `'backward'` or `'both'`: the side from which to count `limit`. `None` means `'forward'` for `'linear'` | the default also fills after the last known value, by copying it: `[nan, 1, nan, nan, nan, 5, nan]` ends with 5.0. The first `nan` stays |
+| `limit_area` | `None` | `'inside'` fills only the gaps between two known values. `'outside'` fills only the ends | `'inside'` leaves both ends as `nan` |
+| `**kwargs` | — | more arguments for SciPy methods, such as `order` for `'polynomial'` | `method="polynomial"` needs SciPy, which this book does not install: `ImportError` |
+
+##### `pd.Series.ffill`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `axis` | `None` | not used for a Series | — |
+| `inplace` | `False` | with `True`, change the Series and return `None` | — |
+| `limit` | `None` | the largest number of missing values in a row to fill | `limit=3` leaves 21 of 42 |
+| `limit_area` | `None` | `'inside'` fills only between two known values. `'outside'` fills only after the last one | with the default, the gap after the last known value is filled too. A value that is no longer reported continues forever |
+
 
 ## What you have now
 

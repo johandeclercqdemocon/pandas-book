@@ -75,13 +75,7 @@ pd.Series(
 
 The constructor makes a Series from values and, if you give them, labels.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `data` | `None` | the values: a list, a NumPy array, a dict or one number. A dict gives its keys as the labels | — |
-| `index` | `None` | the labels. With `None`, the positions 0, 1, 2 and so on, as a `RangeIndex`. With a dict for `data`, it selects keys of the dict | a label that is not a key gives `NaN`, and `int64` becomes `float64`. A list of the wrong length raises `ValueError` |
-| `dtype` | `None` | the type of every value. With `None`, pandas infers it from `data` | `dtype="int64"` on `[1, None]` raises `TypeError`. The type `"Int64"` holds the gap as `<NA>` ([Chapter 5](05-missing-data.md)) |
-| `name` | `None` | the name of the Series. It becomes the column name when the Series goes into a DataFrame | — |
-| `copy` | `None` | with `None`, a NumPy array is copied, and a Series or an Index is not. `copy=False` keeps the array of the caller | with `copy=False`, a later write to the NumPy array changes the Series: `[1, 2, 3]` became `[99, 2, 3]` |
+The table under `pd.Series` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## The index takes part in arithmetic
 
@@ -153,13 +147,7 @@ pd.DataFrame(
 
 The constructor makes a table from columns, rows or a 2-D array.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `data` | `None` | a dict of columns, a list of rows, a 2-D NumPy array or another DataFrame | lists of different lengths in a dict raise `ValueError` |
-| `index` | `None` | the row labels. With `None`, a `RangeIndex`, or the union of the labels of the Series in `data` | with a dict of Series, the rows align: a label that a Series does not have gives `NaN`. With a dict of lists, a wrong length raises `ValueError` |
-| `columns` | `None` | the column labels. With a dict for `data`, it selects and orders the keys | a name that is not a key gives a column of `NaN`, and no error |
-| `dtype` | `None` | one type for all the columns. With `None`, each column gets its own type | a dict of types raises `TypeError`. Use `astype` with a dict after the call ([Chapter 4](04-types-and-memory.md)) |
-| `copy` | `None` | with `None`, a dict of data is copied, and in pandas 3.0.6 a 2-D NumPy array is also copied. `copy=False` shares the memory of a 2-D array | the docstring says that `None` does not copy a 2-D array. The run says that it does: `np.shares_memory` is `False` with `None` and `True` with `copy=False` |
+The table under `pd.DataFrame` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 ## Read the call records
 
@@ -264,9 +252,7 @@ pdbook.looks.first_look(
 
 The function returns one row for each column of `df`, indexed by the column name.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `df` | required | any DataFrame | on an empty table, `df.iloc[0]` raises `IndexError` |
+The table under `pdbook.looks.first_look` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 The function builds a DataFrame from a dict of four Series. Each Series has the column names of `df` as its index. Because the indexes are equal, pandas aligns them without any extra code. This is the alignment from the previous section, and here it saves code.
 
@@ -302,9 +288,7 @@ pdbook.looks.headline(
 
 The function returns a string, not a table.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `df` | required | any DataFrame | — |
+The table under `pdbook.looks.headline` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 The memory figure is the deep figure: it counts the bytes of the strings, not only of the pointers to them. Use `memory_usage(deep=True)` whenever you compare two representations of the same table.
 
@@ -400,6 +384,41 @@ When the two indexes are equal, pandas sees it and adds the arrays by position. 
 | `pd.read_csv` | Read the call records ([Chapter 2](02-input-and-output.md) has the block) | a CSV file as a DataFrame |
 | `pdbook.looks.first_look` | Build: first_look | one row for each column: dtype, nulls, distinct values, first value |
 | `pdbook.looks.headline` | Build: first_look | one line: rows, columns and deep memory |
+
+### Parameters
+
+##### `pd.Series`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `data` | `None` | the values: a list, a NumPy array, a dict or one number. A dict gives its keys as the labels | — |
+| `index` | `None` | the labels. With `None`, the positions 0, 1, 2 and so on, as a `RangeIndex`. With a dict for `data`, it selects keys of the dict | a label that is not a key gives `NaN`, and `int64` becomes `float64`. A list of the wrong length raises `ValueError` |
+| `dtype` | `None` | the type of every value. With `None`, pandas infers it from `data` | `dtype="int64"` on `[1, None]` raises `TypeError`. The type `"Int64"` holds the gap as `<NA>` ([Chapter 5](05-missing-data.md)) |
+| `name` | `None` | the name of the Series. It becomes the column name when the Series goes into a DataFrame | — |
+| `copy` | `None` | with `None`, a NumPy array is copied, and a Series or an Index is not. `copy=False` keeps the array of the caller | with `copy=False`, a later write to the NumPy array changes the Series: `[1, 2, 3]` became `[99, 2, 3]` |
+
+##### `pd.DataFrame`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `data` | `None` | a dict of columns, a list of rows, a 2-D NumPy array or another DataFrame | lists of different lengths in a dict raise `ValueError` |
+| `index` | `None` | the row labels. With `None`, a `RangeIndex`, or the union of the labels of the Series in `data` | with a dict of Series, the rows align: a label that a Series does not have gives `NaN`. With a dict of lists, a wrong length raises `ValueError` |
+| `columns` | `None` | the column labels. With a dict for `data`, it selects and orders the keys | a name that is not a key gives a column of `NaN`, and no error |
+| `dtype` | `None` | one type for all the columns. With `None`, each column gets its own type | a dict of types raises `TypeError`. Use `astype` with a dict after the call ([Chapter 4](04-types-and-memory.md)) |
+| `copy` | `None` | with `None`, a dict of data is copied, and in pandas 3.0.6 a 2-D NumPy array is also copied. `copy=False` shares the memory of a 2-D array | the docstring says that `None` does not copy a 2-D array. The run says that it does: `np.shares_memory` is `False` with `None` and `True` with `copy=False` |
+
+##### `pdbook.looks.first_look`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `df` | required | any DataFrame | on an empty table, `df.iloc[0]` raises `IndexError` |
+
+##### `pdbook.looks.headline`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `df` | required | any DataFrame | — |
+
 
 ## What you have now
 

@@ -134,10 +134,7 @@ pdbook.chunked.make_big_csv(
 
 The function writes the call records `times` over to `path`, with a unique `call_id`, and returns the path as a `pathlib.Path`.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `path` | required | the file to write | an existing file is replaced, with no question |
-| `times` | `50` | the number of copies: 50 gives 1,000,000 rows and 84 MB | `times=100` writes 2,000,000 rows and 170 MB. Check the free disk space first |
+The table under `pdbook.chunked.make_big_csv` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 The method works for aggregates that you can add across chunks: sum, count, minimum, maximum. A mean is the sum divided by the count, so keep both and divide at the end. It does not work for the median, a quantile, or the number of distinct values. Those need all the values of a group at once, or an approximation with a different structure. The mean of the means of the chunks is also wrong, because chunks hold different counts.
 
@@ -187,10 +184,7 @@ pdbook.chunked.talk_by_caller_chunked(
 
 The function returns, for each caller, the `sum`, the `size` and the `mean` of the duration of the answered calls. Only one chunk is in memory at a time.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `path` | required | the CSV file of call records | a path that does not exist raises `FileNotFoundError` |
-| `chunksize` | `100000` | the rows in each chunk. It changes the memory and not the result | — (with 10 rows for each chunk the result is still equal, and the job is much slower) |
+The table under `pdbook.chunked.talk_by_caller_chunked` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 #### `pdbook.chunked.talk_by_caller_whole`
 
@@ -202,9 +196,7 @@ pdbook.chunked.talk_by_caller_whole(
 
 The function returns the same table as `talk_by_caller_chunked`, from one read of the whole file.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `path` | required | the CSV file of call records | it needs the memory of the whole file: see the next block |
+The table under `pdbook.chunked.talk_by_caller_whole` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 Now the memory. Each measure starts a new Python process, because the peak of one process includes everything that it did before. The figure is `VmHWM`, the high-water mark of the resident memory of the new process, from `/proc/self/status`, so the function works on Linux only. The block writes a file of 2,000,000 rows and 170 MB, and it takes about 30 seconds:
 
@@ -255,9 +247,7 @@ pdbook.chunked.peak_rss_mb(
 
 The function runs `code` in a new Python process and returns its peak resident memory in MB, the `VmHWM` line of `/proc/self/status`. It works on Linux only.
 
-| parameter | default | what it does | what goes wrong |
-|---|---|---|---|
-| `code` | required | Python source as a string | `ru_maxrss` of a child includes the memory of the parent at the fork, so the function reads `VmHWM`. Code that fails raises `CalledProcessError`. A plain `x = 1` gives about 11 MB: the interpreter alone |
+The table under `pdbook.chunked.peak_rss_mb` in the Reference section of this chapter gives each parameter and what goes wrong with it.
 
 The chunked version does not grow with the file. Its peak is the baseline plus one chunk. That is the property that you buy. You pay for it in more code, in aggregates that you can add, and in a read that is not faster. The block prints the time of the chunked job for 2,000,000 rows.
 
@@ -341,6 +331,35 @@ The second pass gives no rows, and no error. A job that computes the sum over th
 | `pdbook.chunked.talk_by_caller_chunked` | Build: chunked and whole | sum, size and mean for each caller, with bounded memory |
 | `pdbook.chunked.talk_by_caller_whole` | Build: chunked and whole | the same result from one read |
 | `pdbook.chunked.peak_rss_mb` | Build: chunked and whole | the peak memory of a fresh process, in MB (Linux) |
+
+### Parameters
+
+##### `pdbook.chunked.make_big_csv`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `path` | required | the file to write | an existing file is replaced, with no question |
+| `times` | `50` | the number of copies: 50 gives 1,000,000 rows and 84 MB | `times=100` writes 2,000,000 rows and 170 MB. Check the free disk space first |
+
+##### `pdbook.chunked.talk_by_caller_chunked`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `path` | required | the CSV file of call records | a path that does not exist raises `FileNotFoundError` |
+| `chunksize` | `100000` | the rows in each chunk. It changes the memory and not the result | — (with 10 rows for each chunk the result is still equal, and the job is much slower) |
+
+##### `pdbook.chunked.talk_by_caller_whole`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `path` | required | the CSV file of call records | it needs the memory of the whole file: see the next block |
+
+##### `pdbook.chunked.peak_rss_mb`
+
+| parameter | default | what it does | what goes wrong |
+|---|---|---|---|
+| `code` | required | Python source as a string | `ru_maxrss` of a child includes the memory of the parent at the fork, so the function reads `VmHWM`. Code that fails raises `CalledProcessError`. A plain `x = 1` gives about 11 MB: the interpreter alone |
+
 
 ## What you have now
 

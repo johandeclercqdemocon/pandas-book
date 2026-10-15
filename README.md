@@ -4,7 +4,7 @@
 
 This book teaches pandas with one small data set, the call records of a mobile operator. It follows one rule: **nothing is asserted that was not run**. Each chapter builds something that you keep. Examples are a loader, a validator, a report and a leak test.
 
-Each chapter shows the mechanism under the code. At the first use of each function, it prints the full signature and explains every parameter in a table. It ends with exercises and worked solutions. The checker of the book executes every code block. It compares every printed output with what the code prints now.
+Each chapter shows the mechanism under the code. At the first use of each function, it prints the full signature. The Reference section at the end of the chapter explains every parameter in a table. It ends with exercises and worked solutions. The checker of the book executes every code block. It compares every printed output with what the code prints now.
 
 It targets **pandas 3.0**. Most tutorials on the web describe pandas 1.x or 2.x, and 3.0 changed behavior that matters: text is stored as `str`, copy-on-write is always on, timestamps have microsecond resolution. Chapter 24 lists each change that the book ran.
 
@@ -51,7 +51,7 @@ Each chapter has the same shape:
 - A header with *Build*, *Theory kept*, *Source* and *Run this first*.
 - The working material.
 - **How it works**: the mechanism, with one executed block and three lines (invariant, failure, cost).
-- A `####` block at the first use of each function: the full signature of the installed library, then one row for each parameter, with its default and a measured consequence or `—`. A later chapter links back to the block. It does not repeat it.
+- A `####` block at the first use of each function: the full signature of the installed library. Its table is in the Reference section of the chapter: one row for each parameter, with its default and a measured consequence or `—`. A later chapter links back to the block. It does not repeat it.
 - **Reference**: an index of the functions of the chapter, with the section that introduces each one.
 - A summary with a link to the next chapter.
 
